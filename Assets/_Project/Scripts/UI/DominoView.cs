@@ -87,6 +87,16 @@ namespace DomiNox.UI
             dragEnded?.Invoke(eventData.position);
         }
 
+        private void OnDisable()
+        {
+            DestroyDragGhostImmediateSafe();
+        }
+
+        private void OnDestroy()
+        {
+            DestroyDragGhostImmediateSafe();
+        }
+
         private void CreateDragGhost(Vector2 position)
         {
             DestroyDragGhost();
@@ -121,15 +131,34 @@ namespace DomiNox.UI
             }
         }
 
+        public void ForceClearDragGhost()
+        {
+            DestroyDragGhost();
+        }
+
         private void DestroyDragGhost()
         {
             if (dragGhost != null)
             {
                 Destroy(dragGhost);
-                dragGhost = null;
-                dragGhostRect = null;
-                dragGhostLabel = null;
+                ClearDragGhostReferences();
             }
+        }
+
+        private void DestroyDragGhostImmediateSafe()
+        {
+            if (dragGhost != null)
+            {
+                Destroy(dragGhost);
+                ClearDragGhostReferences();
+            }
+        }
+
+        private void ClearDragGhostReferences()
+        {
+            dragGhost = null;
+            dragGhostRect = null;
+            dragGhostLabel = null;
         }
 
         private void ApplyOrientation()

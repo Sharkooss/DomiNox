@@ -48,6 +48,11 @@ namespace DomiNox.UI
             {
                 RotateSelection(false);
             }
+
+            if (hasPointerPreview && activeDragView != null && Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame)
+            {
+                DropDraggedDomino(Mouse.current.position.ReadValue());
+            }
         }
 
         private void BuildLayout()
@@ -116,8 +121,15 @@ namespace DomiNox.UI
 
         private void DropDraggedDomino(Vector2 screenPosition)
         {
+            if (!hasPointerPreview && activeDragView == null)
+            {
+                return;
+            }
+
+            var draggedView = activeDragView;
             hasPointerPreview = false;
             activeDragView = null;
+            draggedView?.ForceClearDragGhost();
             if (gridView.TryGetCellAtScreenPosition(screenPosition, out var x, out var y))
             {
                 controller.TryPlaceSelected(x, y);
