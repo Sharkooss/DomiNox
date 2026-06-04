@@ -1,5 +1,6 @@
 using DomiNox.Core;
 using DomiNox.Dominoes;
+using DomiNox.Dominex;
 
 namespace DomiNox.Run
 {
@@ -7,6 +8,7 @@ namespace DomiNox.Run
     {
         public int Credits { get; set; } = GameConstants.StartingCredits;
         public DominoBag Bag { get; } = new DominoBag();
+        public DomiNexInventory DomiNexInventory { get; } = new DomiNexInventory();
         public LevelState CurrentLevel { get; set; }
     }
 }

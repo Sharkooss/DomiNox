@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DomiNox.Core;
 using DomiNox.Dominoes;
+using DomiNox.Dominex;
 using DomiNox.Grid;
 using DomiNox.Patterns;
 using DomiNox.Scoring;
@@ -13,6 +14,7 @@ namespace DomiNox.Run
     public sealed class GameFlowController : MonoBehaviour
     {
         private readonly PatternDetector patternDetector = new PatternDetector();
+        private readonly DomiNexEffectEngine dominexEffectEngine = new DomiNexEffectEngine();
         private ScoreCalculator scoreCalculator;
         private ScoreResult lastScoreResult;
         private DominoInstance selectedDomino;
@@ -27,13 +29,16 @@ namespace DomiNox.Run
 
         private void Awake()
         {
-            scoreCalculator = new ScoreCalculator(patternDetector);
+            scoreCalculator = new ScoreCalculator(patternDetector, dominexEffectEngine);
             InitializeRun();
         }
 
         public void InitializeRun()
         {
             Run = new RunState { CurrentLevel = new LevelState() };
+            Run.DomiNexInventory.SetActive(DomiNexRegistry.GetPrototypeActiveSet());
+            dominexEffectEngine.ApplyRunStart(Run.DomiNexInventory, Run, null);
+            dominexEffectEngine.ApplyLevelStart(Run.DomiNexInventory, Run.CurrentLevel, null);
             Run.Bag.Initialize(DominoFactory.CreateDoubleSixSet());
 
             foreach (var domino in Run.Bag.Draw(GameConstants.StartingHandSize))
@@ -94,7 +99,12 @@ namespace DomiNox.Run
                 level.Hand.AddDomino(domino);
             }
 
-            level.DiscardsRemaining--;
+            if (!(level.DiscardsUsed == 0 && dominexEffectEngine.HasActive(Run.DomiNexInventory, "main_stable")))
+            {
+                level.DiscardsRemaining--;
+            }
+
+            level.DiscardsUsed++;
             selectedForDiscard.Clear();
             selectedDomino = null;
             Notify($"{discarded.Count} domino(s) discard. {level.DiscardsRemaining} discard(s) restant(s).");
@@ -178,6 +188,7 @@ namespace DomiNox.Run
             selectedDomino = null;
             selectedForDiscard.Clear();
             level.ActionPoints = GameConstants.PhaseOneActionPoints;
+            level.DiscardsUsed = 0;
             level.CurrentScore = 0;
             level.IsWon = false;
             level.IsLost = false;
@@ -188,7 +199,8 @@ namespace DomiNox.Run
         public void ValidateScore()
         {
             var level = Run.CurrentLevel;
-            lastScoreResult = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes);
+            var dominexContext = new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.MaxPlacedDominoes);
+            lastScoreResult = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext);
             level.CurrentScore = lastScoreResult.FinalScore;
             level.IsWon = level.CurrentScore >= level.Quota;
             level.IsLost = !level.IsWon;

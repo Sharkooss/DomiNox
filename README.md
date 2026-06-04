@@ -22,6 +22,7 @@ Open `Assets/_Project/Scenes/MainMenu.unity` and press Play. Click `Jouer` to lo
 - Press `E` to rotate the dragged or selected domino 90 degrees right.
 - Reset placed dominoes back to hand.
 - Use `Discard selection` up to 3 times to replace selected hand dominoes.
+- Prototype DomiNex loadout is active for testing modular scoring effects.
 - Validate the level and compare the score to quota 80.
 - See basic pattern detection and scoring breakdown.
 

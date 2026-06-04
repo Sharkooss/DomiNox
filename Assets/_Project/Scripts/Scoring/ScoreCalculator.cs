@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DomiNox.Dominex;
 using DomiNox.Grid;
 using DomiNox.Patterns;
 
@@ -8,13 +9,20 @@ namespace DomiNox.Scoring
     public sealed class ScoreCalculator
     {
         private readonly PatternDetector patternDetector;
+        private readonly DomiNexEffectEngine dominexEffectEngine;
 
-        public ScoreCalculator(PatternDetector patternDetector)
+        public ScoreCalculator(PatternDetector patternDetector, DomiNexEffectEngine dominexEffectEngine = null)
         {
             this.patternDetector = patternDetector;
+            this.dominexEffectEngine = dominexEffectEngine ?? new DomiNexEffectEngine();
         }
 
         public ScoreResult Calculate(List<PlacedDomino> placedDominoes, int maxPlacedDominoes)
+        {
+            return Calculate(placedDominoes, maxPlacedDominoes, null);
+        }
+
+        public ScoreResult Calculate(List<PlacedDomino> placedDominoes, int maxPlacedDominoes, DomiNexScoringContext dominexContext)
         {
             placedDominoes = placedDominoes ?? new List<PlacedDomino>();
 
@@ -54,6 +62,8 @@ namespace DomiNox.Scoring
                 count += 30;
                 breakdown.Add("Haute mise: +30 Count");
             }
+
+            dominexEffectEngine.ApplyScoringEffects(placedDominoes, dominexContext, ref count, ref mult, breakdown);
 
             breakdown.Add($"Score final: {count} x {mult} = {count * mult}");
             return new ScoreResult(count, mult, patterns, breakdown);
