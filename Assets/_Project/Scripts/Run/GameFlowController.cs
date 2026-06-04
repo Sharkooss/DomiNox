@@ -50,10 +50,23 @@ namespace DomiNox.Run
             }
         }
 
+        public void BeginDragDomino(DominoInstance domino)
+        {
+            if (Run.CurrentLevel.Hand.Contains(domino))
+            {
+                selectedDomino = domino;
+            }
+        }
+
         public void ToggleOrientation()
         {
             CurrentOrientation = CurrentOrientation == DominoOrientation.Horizontal ? DominoOrientation.Vertical : DominoOrientation.Horizontal;
             Notify($"Orientation: {CurrentOrientation}");
+        }
+
+        public void RotateSelectedRight()
+        {
+            CurrentOrientation = CurrentOrientation == DominoOrientation.Horizontal ? DominoOrientation.Vertical : DominoOrientation.Horizontal;
         }
 
         public void TryPlaceSelected(int x, int y)
@@ -74,7 +87,7 @@ namespace DomiNox.Run
             var position = new GridPosition(x, y);
             if (!level.Grid.PlaceDomino(selectedDomino, position, CurrentOrientation))
             {
-                Notify("Placement impossible.");
+                Notify("Placement impossible: connecte une valeur identique.");
                 return;
             }
 
@@ -82,6 +95,17 @@ namespace DomiNox.Run
             level.ActionPoints--;
             selectedDomino = null;
             Notify("Domino place.");
+        }
+
+        public bool CanPlaceSelected(int x, int y)
+        {
+            var level = Run.CurrentLevel;
+            if (selectedDomino == null || level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || level.ActionPoints <= 0)
+            {
+                return false;
+            }
+
+            return level.Grid.CanPlaceDomino(selectedDomino, new GridPosition(x, y), CurrentOrientation);
         }
 
         public void ResetPlacements()

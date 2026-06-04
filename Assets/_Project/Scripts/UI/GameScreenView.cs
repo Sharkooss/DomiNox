@@ -3,6 +3,7 @@ using DomiNox.Scoring;
 using DomiNox.Utilities;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
@@ -16,6 +17,8 @@ namespace DomiNox.UI
         private HandView handView;
         private ActionButtonsView actionButtons;
         private Text feedback;
+        private Vector2 lastPointerPosition;
+        private bool hasPointerPreview;
 
         private void Start()
         {
@@ -30,6 +33,16 @@ namespace DomiNox.UI
             if (controller != null)
             {
                 controller.StateChanged -= Render;
+            }
+        }
+
+        private void Update()
+        {
+            if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+            {
+                controller.RotateSelectedRight();
+                actionButtons.Render(controller);
+                RefreshPointerPreview();
             }
         }
 
@@ -74,7 +87,7 @@ namespace DomiNox.UI
             handView = new GameObject("Hand", typeof(RectTransform), typeof(LayoutElement)).AddComponent<HandView>();
             handView.transform.SetParent(root.transform, false);
             handView.GetComponent<LayoutElement>().preferredHeight = 76f;
-            handView.Initialize(controller);
+            handView.Initialize(controller, UpdateDragPreview, DropDraggedDomino);
         }
 
         private void Render(RunState run, ScoreResult score, string message)
@@ -84,6 +97,46 @@ namespace DomiNox.UI
             handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino);
             actionButtons.Render(controller);
             feedback.text = message;
+            if (hasPointerPreview)
+            {
+                RefreshPointerPreview();
+            }
+        }
+
+        private void UpdateDragPreview(Vector2 screenPosition)
+        {
+            lastPointerPosition = screenPosition;
+            hasPointerPreview = true;
+            RefreshPointerPreview();
+        }
+
+        private void DropDraggedDomino(Vector2 screenPosition)
+        {
+            hasPointerPreview = false;
+            if (gridView.TryGetCellAtScreenPosition(screenPosition, out var x, out var y))
+            {
+                controller.TryPlaceSelected(x, y);
+                return;
+            }
+
+            gridView.Render(controller.Run.CurrentLevel.Grid);
+        }
+
+        private void RefreshPointerPreview()
+        {
+            if (controller.SelectedDomino == null || !gridView.TryGetCellAtScreenPosition(lastPointerPosition, out var x, out var y))
+            {
+                gridView.Render(controller.Run.CurrentLevel.Grid);
+                return;
+            }
+
+            var valid = controller.CanPlaceSelected(x, y);
+            gridView.RenderPreview(
+                controller.Run.CurrentLevel.Grid,
+                controller.SelectedDomino,
+                new DomiNox.Grid.GridPosition(x, y),
+                controller.CurrentOrientation,
+                valid);
         }
 
         private static void Stretch(RectTransform rect)

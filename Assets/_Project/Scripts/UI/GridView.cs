@@ -1,4 +1,5 @@
 using DomiNox.Core;
+using DomiNox.Dominoes;
 using DomiNox.Grid;
 using DomiNox.Run;
 using UnityEngine;
@@ -42,6 +43,43 @@ namespace DomiNox.UI
                     var placed = grid.GetAt(new GridPosition(x, y));
                     cells[x, y].SetContent(placed?.Domino.ToString() ?? string.Empty, placed != null);
                 }
+            }
+        }
+
+        public bool TryGetCellAtScreenPosition(Vector2 screenPosition, out int x, out int y)
+        {
+            for (var cellY = 0; cellY < GameConstants.GridHeight; cellY++)
+            {
+                for (var cellX = 0; cellX < GameConstants.GridWidth; cellX++)
+                {
+                    var rect = (RectTransform)cells[cellX, cellY].transform;
+                    if (RectTransformUtility.RectangleContainsScreenPoint(rect, screenPosition))
+                    {
+                        x = cellX;
+                        y = cellY;
+                        return true;
+                    }
+                }
+            }
+
+            x = -1;
+            y = -1;
+            return false;
+        }
+
+        public void RenderPreview(GridState grid, DominoInstance domino, GridPosition position, DominoOrientation orientation, bool valid)
+        {
+            Render(grid);
+            var index = 0;
+            foreach (var cell in GridState.GetCells(position, orientation))
+            {
+                if (cell.X >= 0 && cell.X < GameConstants.GridWidth && cell.Y >= 0 && cell.Y < GameConstants.GridHeight)
+                {
+                    var value = index == 0 ? domino.Definition.Left : domino.Definition.Right;
+                    cells[cell.X, cell.Y].SetPreview(value.ToString(), valid);
+                }
+
+                index++;
             }
         }
     }

@@ -33,5 +33,12 @@ namespace DomiNox.UI
             background.color = occupied ? new Color(0.82f, 0.82f, 0.78f) : new Color(0.18f, 0.2f, 0.24f);
             label.color = occupied ? Color.black : Color.white;
         }
+
+        public void SetPreview(string value, bool valid)
+        {
+            label.text = value;
+            background.color = valid ? new Color(0.25f, 0.72f, 0.36f, 0.9f) : new Color(0.82f, 0.18f, 0.18f, 0.9f);
+            label.color = Color.white;
+        }
     }
 }

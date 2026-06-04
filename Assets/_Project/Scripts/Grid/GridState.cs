@@ -9,6 +9,13 @@ namespace DomiNox.Grid
     {
         private readonly Dictionary<GridPosition, PlacedDomino> occupiedCells = new Dictionary<GridPosition, PlacedDomino>();
         private readonly List<PlacedDomino> placedDominoes = new List<PlacedDomino>();
+        private static readonly GridPosition[] AdjacentOffsets =
+        {
+            new GridPosition(1, 0),
+            new GridPosition(-1, 0),
+            new GridPosition(0, 1),
+            new GridPosition(0, -1)
+        };
 
         public bool CanPlaceDomino(DominoInstance domino, GridPosition position, DominoOrientation orientation)
         {
@@ -17,7 +24,8 @@ namespace DomiNox.Grid
                 return false;
             }
 
-            foreach (var cell in GetCells(position, orientation))
+            var cells = GetCells(position, orientation).ToList();
+            foreach (var cell in cells)
             {
                 if (cell.X < 0 || cell.X >= GameConstants.GridWidth || cell.Y < 0 || cell.Y >= GameConstants.GridHeight)
                 {
@@ -30,7 +38,7 @@ namespace DomiNox.Grid
                 }
             }
 
-            return true;
+            return placedDominoes.Count == 0 || HasMatchingAdjacentValue(domino, cells);
         }
 
         public bool PlaceDomino(DominoInstance domino, GridPosition position, DominoOrientation orientation)
@@ -78,12 +86,52 @@ namespace DomiNox.Grid
 
         public PlacedDomino GetAt(GridPosition position) => occupiedCells.TryGetValue(position, out var placed) ? placed : null;
 
+        public bool TryGetCellValue(GridPosition position, out int value)
+        {
+            if (!occupiedCells.TryGetValue(position, out var placed))
+            {
+                value = 0;
+                return false;
+            }
+
+            value = GetPlacedCellValue(placed, position);
+            return true;
+        }
+
         public static IEnumerable<GridPosition> GetCells(GridPosition position, DominoOrientation orientation)
         {
             yield return position;
             yield return orientation == DominoOrientation.Horizontal
                 ? new GridPosition(position.X + 1, position.Y)
                 : new GridPosition(position.X, position.Y + 1);
+        }
+
+        private bool HasMatchingAdjacentValue(DominoInstance domino, IReadOnlyList<GridPosition> cells)
+        {
+            for (var i = 0; i < cells.Count; i++)
+            {
+                var value = i == 0 ? domino.Definition.Left : domino.Definition.Right;
+                foreach (var offset in AdjacentOffsets)
+                {
+                    var adjacent = new GridPosition(cells[i].X + offset.X, cells[i].Y + offset.Y);
+                    if (TryGetCellValue(adjacent, out var adjacentValue) && adjacentValue == value)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static int GetPlacedCellValue(PlacedDomino placed, GridPosition position)
+        {
+            if (position.Equals(placed.Position))
+            {
+                return placed.Domino.Definition.Left;
+            }
+
+            return placed.Domino.Definition.Right;
         }
     }
 }

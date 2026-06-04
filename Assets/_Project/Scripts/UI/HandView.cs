@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using DomiNox.Dominoes;
 using DomiNox.Run;
 using UnityEngine;
@@ -10,10 +11,14 @@ namespace DomiNox.UI
     {
         private readonly List<DominoView> views = new List<DominoView>();
         private GameFlowController controller;
+        private Action<Vector2> dragged;
+        private Action<Vector2> dragEnded;
 
-        public void Initialize(GameFlowController flowController)
+        public void Initialize(GameFlowController flowController, Action<Vector2> onDragged, Action<Vector2> onDragEnded)
         {
             controller = flowController;
+            dragged = onDragged;
+            dragEnded = onDragEnded;
             var layout = gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 8f;
             layout.childAlignment = TextAnchor.MiddleCenter;
@@ -36,7 +41,7 @@ namespace DomiNox.UI
                 layout.preferredWidth = 76f;
                 layout.preferredHeight = 48f;
                 var view = go.AddComponent<DominoView>();
-                view.Initialize(domino, controller.SelectDomino);
+                view.Initialize(domino, controller.SelectDomino, controller.BeginDragDomino, dragged, dragEnded);
                 view.SetSelected(domino == selected);
                 views.Add(view);
             }

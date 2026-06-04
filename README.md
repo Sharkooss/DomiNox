@@ -15,12 +15,18 @@ Open `Assets/_Project/Scenes/MainMenu.unity` and press Play. Click `Jouer` to lo
 ## Playable Now
 
 - Draw a starting hand of 7 dominoes.
-- Select a domino from the hand.
-- Place dominoes on a logical 6x6 grid.
-- Toggle horizontal or vertical orientation.
+- Select or drag a domino from the hand.
+- Drop dominoes on a logical 6x6 grid with placement preview.
+- Press `Space` to rotate the dragged or selected domino by 90 degrees.
 - Reset placed dominoes back to hand.
 - Validate the level and compare the score to quota 80.
 - See basic pattern detection and scoring breakdown.
+
+## Phase 1 Placement Rules
+
+- The first domino can be placed anywhere valid on the grid.
+- Later dominoes must touch an existing domino orthogonally with at least one matching adjacent number.
+- Out-of-grid and overlapping placements are refused.
 
 ## Not Implemented Yet
 
