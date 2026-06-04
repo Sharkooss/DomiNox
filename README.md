@@ -17,7 +17,8 @@ Open `Assets/_Project/Scenes/MainMenu.unity` and press Play. Click `Jouer` to lo
 - Draw a starting hand of 7 dominoes.
 - Select or drag a domino from the hand.
 - Drop dominoes on a logical 6x6 grid with placement preview.
-- Press `Space` to rotate the dragged or selected domino by 90 degrees.
+- Press `A` to rotate the dragged or selected domino 90 degrees left.
+- Press `E` to rotate the dragged or selected domino 90 degrees right.
 - Reset placed dominoes back to hand.
 - Validate the level and compare the score to quota 80.
 - See basic pattern detection and scoring breakdown.

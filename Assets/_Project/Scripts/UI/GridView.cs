@@ -75,7 +75,7 @@ namespace DomiNox.UI
             {
                 if (cell.X >= 0 && cell.X < GameConstants.GridWidth && cell.Y >= 0 && cell.Y < GameConstants.GridHeight)
                 {
-                    var value = index == 0 ? domino.Definition.Left : domino.Definition.Right;
+                    var value = GridState.GetCellValue(domino, orientation, index);
                     cells[cell.X, cell.Y].SetPreview(value.ToString(), valid);
                 }
 

@@ -19,6 +19,7 @@ namespace DomiNox.UI
         private Text feedback;
         private Vector2 lastPointerPosition;
         private bool hasPointerPreview;
+        private DominoView activeDragView;
 
         private void Start()
         {
@@ -38,11 +39,14 @@ namespace DomiNox.UI
 
         private void Update()
         {
-            if (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame)
+            if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
             {
-                controller.RotateSelectedRight();
-                actionButtons.Render(controller);
-                RefreshPointerPreview();
+                RotateSelection(true);
+            }
+
+            if (Keyboard.current != null && Keyboard.current.aKey.wasPressedThisFrame)
+            {
+                RotateSelection(false);
             }
         }
 
@@ -87,14 +91,14 @@ namespace DomiNox.UI
             handView = new GameObject("Hand", typeof(RectTransform), typeof(LayoutElement)).AddComponent<HandView>();
             handView.transform.SetParent(root.transform, false);
             handView.GetComponent<LayoutElement>().preferredHeight = 76f;
-            handView.Initialize(controller, UpdateDragPreview, DropDraggedDomino);
+            handView.Initialize(controller, SetActiveDragView, UpdateDragPreview, DropDraggedDomino);
         }
 
         private void Render(RunState run, ScoreResult score, string message)
         {
             scorePanel.Render(run, score);
             gridView.Render(run.CurrentLevel.Grid);
-            handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino);
+            handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation);
             actionButtons.Render(controller);
             feedback.text = message;
             if (hasPointerPreview)
@@ -113,6 +117,7 @@ namespace DomiNox.UI
         private void DropDraggedDomino(Vector2 screenPosition)
         {
             hasPointerPreview = false;
+            activeDragView = null;
             if (gridView.TryGetCellAtScreenPosition(screenPosition, out var x, out var y))
             {
                 controller.TryPlaceSelected(x, y);
@@ -122,14 +127,22 @@ namespace DomiNox.UI
             gridView.Render(controller.Run.CurrentLevel.Grid);
         }
 
+        private void SetActiveDragView(DominoView dominoView)
+        {
+            activeDragView = dominoView;
+            activeDragView.SetOrientation(controller.CurrentOrientation);
+        }
+
         private void RefreshPointerPreview()
         {
             if (controller.SelectedDomino == null || !gridView.TryGetCellAtScreenPosition(lastPointerPosition, out var x, out var y))
             {
+                activeDragView?.SetDragGhostOverGrid(false);
                 gridView.Render(controller.Run.CurrentLevel.Grid);
                 return;
             }
 
+            activeDragView?.SetDragGhostOverGrid(true);
             var valid = controller.CanPlaceSelected(x, y);
             gridView.RenderPreview(
                 controller.Run.CurrentLevel.Grid,
@@ -137,6 +150,29 @@ namespace DomiNox.UI
                 new DomiNox.Grid.GridPosition(x, y),
                 controller.CurrentOrientation,
                 valid);
+        }
+
+        private void RotateSelection(bool clockwise)
+        {
+            if (clockwise)
+            {
+                controller.RotateRightWithoutNotify();
+            }
+            else
+            {
+                controller.RotateLeftWithoutNotify();
+            }
+
+            actionButtons.Render(controller);
+            if (hasPointerPreview && activeDragView != null)
+            {
+                activeDragView.SetOrientation(controller.CurrentOrientation);
+            }
+            else
+            {
+                handView.Render(controller.Run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation);
+            }
+            RefreshPointerPreview();
         }
 
         private static void Stretch(RectTransform rect)

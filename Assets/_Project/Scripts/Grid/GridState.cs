@@ -38,7 +38,7 @@ namespace DomiNox.Grid
                 }
             }
 
-            return placedDominoes.Count == 0 || HasMatchingAdjacentValue(domino, cells);
+            return placedDominoes.Count == 0 || HasMatchingAdjacentValue(domino, orientation, cells);
         }
 
         public bool PlaceDomino(DominoInstance domino, GridPosition position, DominoOrientation orientation)
@@ -101,16 +101,21 @@ namespace DomiNox.Grid
         public static IEnumerable<GridPosition> GetCells(GridPosition position, DominoOrientation orientation)
         {
             yield return position;
-            yield return orientation == DominoOrientation.Horizontal
+            yield return IsHorizontal(orientation)
                 ? new GridPosition(position.X + 1, position.Y)
                 : new GridPosition(position.X, position.Y + 1);
         }
 
-        private bool HasMatchingAdjacentValue(DominoInstance domino, IReadOnlyList<GridPosition> cells)
+        public static bool IsHorizontal(DominoOrientation orientation)
+        {
+            return orientation == DominoOrientation.HorizontalRight || orientation == DominoOrientation.HorizontalLeft;
+        }
+
+        private bool HasMatchingAdjacentValue(DominoInstance domino, DominoOrientation orientation, IReadOnlyList<GridPosition> cells)
         {
             for (var i = 0; i < cells.Count; i++)
             {
-                var value = i == 0 ? domino.Definition.Left : domino.Definition.Right;
+                var value = GetCellValue(domino, orientation, i);
                 foreach (var offset in AdjacentOffsets)
                 {
                     var adjacent = new GridPosition(cells[i].X + offset.X, cells[i].Y + offset.Y);
@@ -128,10 +133,18 @@ namespace DomiNox.Grid
         {
             if (position.Equals(placed.Position))
             {
-                return placed.Domino.Definition.Left;
+                return GetCellValue(placed.Domino, placed.Orientation, 0);
             }
 
-            return placed.Domino.Definition.Right;
+            return GetCellValue(placed.Domino, placed.Orientation, 1);
+        }
+
+        public static int GetCellValue(DominoInstance domino, DominoOrientation orientation, int cellIndex)
+        {
+            var reversed = orientation == DominoOrientation.HorizontalLeft || orientation == DominoOrientation.VerticalUp;
+            var firstValue = reversed ? domino.Definition.Right : domino.Definition.Left;
+            var secondValue = reversed ? domino.Definition.Left : domino.Definition.Right;
+            return cellIndex == 0 ? firstValue : secondValue;
         }
     }
 }

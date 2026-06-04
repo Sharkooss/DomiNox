@@ -16,7 +16,7 @@ namespace DomiNox.UI
             layout.spacing = 10f;
             layout.childAlignment = TextAnchor.MiddleCenter;
 
-            rotateButton = UiFactory.CreateButton(transform, "RotateButton", "Tourner: Horizontal");
+            rotateButton = UiFactory.CreateButton(transform, "RotateButton", "E: tourner droite");
             rotateButton.onClick.AddListener(controller.ToggleOrientation);
             rotateLabel = rotateButton.GetComponentInChildren<Text>();
 
@@ -26,7 +26,7 @@ namespace DomiNox.UI
 
         public void Render(GameFlowController controller)
         {
-            rotateLabel.text = $"Tourner: {controller.CurrentOrientation}";
+            rotateLabel.text = $"A/E rotation: {controller.CurrentOrientation}";
         }
     }
 }

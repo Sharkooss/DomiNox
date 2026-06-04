@@ -2,7 +2,9 @@ namespace DomiNox.Grid
 {
     public enum DominoOrientation
     {
-        Horizontal,
-        Vertical
+        HorizontalRight,
+        VerticalDown,
+        HorizontalLeft,
+        VerticalUp
     }
 }

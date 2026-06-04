@@ -18,7 +18,7 @@ namespace DomiNox.Run
         public event Action<RunState, ScoreResult, string> StateChanged;
 
         public RunState Run { get; private set; }
-        public DominoOrientation CurrentOrientation { get; private set; } = DominoOrientation.Horizontal;
+        public DominoOrientation CurrentOrientation { get; private set; } = DominoOrientation.HorizontalRight;
         public DominoInstance SelectedDomino => selectedDomino;
 
         private void Awake()
@@ -60,13 +60,27 @@ namespace DomiNox.Run
 
         public void ToggleOrientation()
         {
-            CurrentOrientation = CurrentOrientation == DominoOrientation.Horizontal ? DominoOrientation.Vertical : DominoOrientation.Horizontal;
+            RotateRight();
             Notify($"Orientation: {CurrentOrientation}");
         }
 
-        public void RotateSelectedRight()
+        public void RotateRightWithoutNotify()
         {
-            CurrentOrientation = CurrentOrientation == DominoOrientation.Horizontal ? DominoOrientation.Vertical : DominoOrientation.Horizontal;
+            RotateRight();
+        }
+
+        public void RotateLeftWithoutNotify()
+        {
+            CurrentOrientation = CurrentOrientation == DominoOrientation.HorizontalRight
+                ? DominoOrientation.VerticalUp
+                : (DominoOrientation)((int)CurrentOrientation - 1);
+        }
+
+        private void RotateRight()
+        {
+            CurrentOrientation = CurrentOrientation == DominoOrientation.VerticalUp
+                ? DominoOrientation.HorizontalRight
+                : (DominoOrientation)((int)CurrentOrientation + 1);
         }
 
         public void TryPlaceSelected(int x, int y)

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using DomiNox.Dominoes;
+using DomiNox.Grid;
 using DomiNox.Run;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,10 +14,12 @@ namespace DomiNox.UI
         private GameFlowController controller;
         private Action<Vector2> dragged;
         private Action<Vector2> dragEnded;
+        private Action<DominoView> dragViewStarted;
 
-        public void Initialize(GameFlowController flowController, Action<Vector2> onDragged, Action<Vector2> onDragEnded)
+        public void Initialize(GameFlowController flowController, Action<DominoView> onDragViewStarted, Action<Vector2> onDragged, Action<Vector2> onDragEnded)
         {
             controller = flowController;
+            dragViewStarted = onDragViewStarted;
             dragged = onDragged;
             dragEnded = onDragEnded;
             var layout = gameObject.AddComponent<HorizontalLayoutGroup>();
@@ -25,7 +28,7 @@ namespace DomiNox.UI
             layout.childForceExpandWidth = false;
         }
 
-        public void Render(HandState hand, DominoInstance selected)
+        public void Render(HandState hand, DominoInstance selected, DominoOrientation selectedOrientation)
         {
             foreach (Transform child in transform)
             {
@@ -38,13 +41,20 @@ namespace DomiNox.UI
                 var go = new GameObject($"Domino_{domino.InstanceId}", typeof(RectTransform), typeof(LayoutElement));
                 go.transform.SetParent(transform, false);
                 var layout = go.GetComponent<LayoutElement>();
-                layout.preferredWidth = 76f;
-                layout.preferredHeight = 48f;
+                layout.preferredWidth = domino == selected && !GridState.IsHorizontal(selectedOrientation) ? 48f : 76f;
+                layout.preferredHeight = domino == selected && !GridState.IsHorizontal(selectedOrientation) ? 76f : 48f;
                 var view = go.AddComponent<DominoView>();
-                view.Initialize(domino, controller.SelectDomino, controller.BeginDragDomino, dragged, dragEnded);
+                view.Initialize(domino, controller.SelectDomino, BeginDragDomino, dragged, dragEnded);
+                view.SetOrientation(domino == selected ? selectedOrientation : DominoOrientation.HorizontalRight);
                 view.SetSelected(domino == selected);
                 views.Add(view);
             }
+        }
+
+        private void BeginDragDomino(DominoInstance domino, DominoView view)
+        {
+            controller.BeginDragDomino(domino);
+            dragViewStarted?.Invoke(view);
         }
     }
 }

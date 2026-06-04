@@ -1,5 +1,6 @@
 using System;
 using DomiNox.Dominoes;
+using DomiNox.Grid;
 using DomiNox.Utilities;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -12,16 +13,19 @@ namespace DomiNox.UI
         private Image background;
         private Text label;
         private DominoInstance domino;
+        private DominoOrientation orientation = DominoOrientation.HorizontalRight;
         private Action<DominoInstance> clicked;
-        private Action<DominoInstance> dragStarted;
+        private Action<DominoInstance, DominoView> dragStarted;
         private Action<Vector2> dragged;
         private Action<Vector2> dragEnded;
         private GameObject dragGhost;
+        private RectTransform dragGhostRect;
+        private Text dragGhostLabel;
 
         public void Initialize(
             DominoInstance dominoInstance,
             Action<DominoInstance> onClicked,
-            Action<DominoInstance> onDragStarted,
+            Action<DominoInstance, DominoView> onDragStarted,
             Action<Vector2> onDragged,
             Action<Vector2> onDragEnded)
         {
@@ -38,6 +42,7 @@ namespace DomiNox.UI
             label.rectTransform.anchorMax = Vector2.one;
             label.rectTransform.offsetMin = Vector2.zero;
             label.rectTransform.offsetMax = Vector2.zero;
+            ApplyOrientation();
         }
 
         public void SetSelected(bool selected)
@@ -48,6 +53,12 @@ namespace DomiNox.UI
             }
         }
 
+        public void SetOrientation(DominoOrientation dominoOrientation)
+        {
+            orientation = dominoOrientation;
+            ApplyOrientation();
+        }
+
         public void OnPointerClick(PointerEventData eventData)
         {
             clicked?.Invoke(domino);
@@ -55,7 +66,7 @@ namespace DomiNox.UI
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            dragStarted?.Invoke(domino);
+            dragStarted?.Invoke(domino, this);
             CreateDragGhost(eventData.position);
             dragged?.Invoke(eventData.position);
         }
@@ -88,17 +99,26 @@ namespace DomiNox.UI
             dragGhost = new GameObject("DominoDragGhost", typeof(RectTransform), typeof(CanvasGroup), typeof(Image));
             dragGhost.transform.SetParent(canvas.transform, false);
             dragGhost.transform.position = position;
-            var rect = dragGhost.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(86f, 54f);
+            dragGhostRect = dragGhost.GetComponent<RectTransform>();
+            dragGhostRect.sizeDelta = new Vector2(86f, 54f);
             dragGhost.GetComponent<CanvasGroup>().blocksRaycasts = false;
             dragGhost.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.82f);
 
-            var ghostLabel = UiFactory.CreateText(dragGhost.transform, "Label", domino.ToString(), 22, TextAnchor.MiddleCenter);
-            ghostLabel.color = Color.black;
-            ghostLabel.rectTransform.anchorMin = Vector2.zero;
-            ghostLabel.rectTransform.anchorMax = Vector2.one;
-            ghostLabel.rectTransform.offsetMin = Vector2.zero;
-            ghostLabel.rectTransform.offsetMax = Vector2.zero;
+            dragGhostLabel = UiFactory.CreateText(dragGhost.transform, "Label", GetDisplayText(), 22, TextAnchor.MiddleCenter);
+            dragGhostLabel.color = Color.black;
+            dragGhostLabel.rectTransform.anchorMin = Vector2.zero;
+            dragGhostLabel.rectTransform.anchorMax = Vector2.one;
+            dragGhostLabel.rectTransform.offsetMin = Vector2.zero;
+            dragGhostLabel.rectTransform.offsetMax = Vector2.zero;
+            ApplyRectOrientation(dragGhostRect, dragGhostLabel.rectTransform);
+        }
+
+        public void SetDragGhostOverGrid(bool overGrid)
+        {
+            if (dragGhost != null && dragGhost.TryGetComponent<CanvasGroup>(out var canvasGroup))
+            {
+                canvasGroup.alpha = overGrid ? 0.5f : 1f;
+            }
         }
 
         private void DestroyDragGhost()
@@ -107,7 +127,46 @@ namespace DomiNox.UI
             {
                 Destroy(dragGhost);
                 dragGhost = null;
+                dragGhostRect = null;
+                dragGhostLabel = null;
             }
+        }
+
+        private void ApplyOrientation()
+        {
+            if (label == null)
+            {
+                return;
+            }
+
+            label.text = GetDisplayText();
+            ApplyRectOrientation((RectTransform)transform, label.rectTransform);
+
+            if (dragGhostLabel != null && dragGhostRect != null)
+            {
+                dragGhostLabel.text = GetDisplayText();
+                ApplyRectOrientation(dragGhostRect, dragGhostLabel.rectTransform);
+            }
+        }
+
+        private string GetDisplayText()
+        {
+            var first = GridState.GetCellValue(domino, orientation, 0);
+            var second = GridState.GetCellValue(domino, orientation, 1);
+            return GridState.IsHorizontal(orientation) ? $"{first}|{second}" : $"{first}\n-\n{second}";
+        }
+
+        private void ApplyRectOrientation(RectTransform rect, RectTransform textRect)
+        {
+            if (GridState.IsHorizontal(orientation))
+            {
+                rect.sizeDelta = new Vector2(76f, 48f);
+                textRect.localRotation = Quaternion.identity;
+                return;
+            }
+
+            rect.sizeDelta = new Vector2(48f, 76f);
+            textRect.localRotation = Quaternion.identity;
         }
     }
 }
