@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DomiNox.Core;
 using DomiNox.Dominoes;
 using DomiNox.Grid;
@@ -10,6 +11,14 @@ namespace DomiNox.UI
     public sealed class GridView : MonoBehaviour
     {
         private readonly GridCellView[,] cells = new GridCellView[GameConstants.GridWidth, GameConstants.GridHeight];
+        private static readonly Color[] DominoBorderPalette =
+        {
+            new Color(0.95f, 0.73f, 0.22f),
+            new Color(0.32f, 0.72f, 1f),
+            new Color(0.75f, 0.45f, 1f),
+            new Color(0.28f, 0.9f, 0.55f),
+            new Color(1f, 0.48f, 0.45f)
+        };
         private GameFlowController controller;
 
         public void Initialize(GameFlowController flowController)
@@ -36,12 +45,21 @@ namespace DomiNox.UI
 
         public void Render(GridState grid)
         {
+            var borderColors = BuildPlacedDominoBorderColors(grid);
             for (var y = 0; y < GameConstants.GridHeight; y++)
             {
                 for (var x = 0; x < GameConstants.GridWidth; x++)
                 {
-                    var placed = grid.GetAt(new GridPosition(x, y));
-                    cells[x, y].SetContent(placed?.Domino.ToString() ?? string.Empty, placed != null);
+                    var position = new GridPosition(x, y);
+                    var placed = grid.GetAt(position);
+                    if (placed == null)
+                    {
+                        cells[x, y].SetContent(string.Empty, false, Color.clear);
+                        continue;
+                    }
+
+                    grid.TryGetCellValue(position, out var value);
+                    cells[x, y].SetContent(value.ToString(), true, borderColors[placed]);
                 }
             }
         }
@@ -81,6 +99,18 @@ namespace DomiNox.UI
 
                 index++;
             }
+        }
+
+        private static Dictionary<PlacedDomino, Color> BuildPlacedDominoBorderColors(GridState grid)
+        {
+            var colors = new Dictionary<PlacedDomino, Color>();
+            var placedDominoes = grid.GetPlacedDominoes();
+            for (var i = 0; i < placedDominoes.Count; i++)
+            {
+                colors[placedDominoes[i]] = DominoBorderPalette[i % DominoBorderPalette.Length];
+            }
+
+            return colors;
         }
     }
 }
