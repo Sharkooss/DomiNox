@@ -3,6 +3,7 @@ using DomiNox.Scoring;
 using DomiNox.Utilities;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
 namespace DomiNox.UI
@@ -97,7 +98,7 @@ namespace DomiNox.UI
         {
             if (FindObjectOfType<EventSystem>() == null)
             {
-                new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+                new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             }
         }
     }

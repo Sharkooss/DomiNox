@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 
 namespace DomiNox.Utilities.Editor
 {
@@ -30,7 +31,7 @@ namespace DomiNox.Utilities.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             new GameObject("Main Camera", typeof(Camera));
-            new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             new GameObject("MainMenuView", typeof(MainMenuView));
             EditorSceneManager.SaveScene(scene, MainMenuPath);
         }
@@ -39,7 +40,7 @@ namespace DomiNox.Utilities.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             new GameObject("Main Camera", typeof(Camera));
-            new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             new GameObject("GameFlowController", typeof(GameFlowController));
             new GameObject("GameScreenView", typeof(GameScreenView));
             EditorSceneManager.SaveScene(scene, GamePath);
