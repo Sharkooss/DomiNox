@@ -26,7 +26,7 @@ namespace DomiNox.UI
         public void Render(RunState run, ScoreResult score)
         {
             var level = run.CurrentLevel;
-            stats.text = $"Floor {level.FloorIndex}\nLevel {level.LevelIndex}\nQuota: {level.Quota}\nCount: {score.Count}\nMult: {score.Mult}\nScore: {score.FinalScore}\nCredits: {run.Credits}\nActions: {level.ActionPoints}\nDiscards: {level.DiscardsRemaining}\nDominos places: {level.Grid.GetPlacedDominoes().Count}/{level.MaxPlacedDominoes}";
+            stats.text = $"Phase: {run.Phase}\nFloor {level.FloorIndex}\nLevel {level.LevelIndex}\nQuota: {level.Quota}\nCount: {score.Count}\nMult: {score.Mult}\nScore: {score.FinalScore}\nCredits: {run.Credits}\nActions: {level.ActionPoints}\nDiscards: {level.DiscardsRemaining}\nDominos places: {level.Grid.GetPlacedDominoes().Count}/{level.MaxPlacedDominoes}";
             dominex.text = $"DomiNex actifs:\n{string.Join("\n", run.DomiNexInventory.Active.Select(definition => $"- {definition.Name}"))}";
             var patterns = score.DetectedPatterns.Count == 0 ? "Aucun pattern" : string.Join(", ", score.DetectedPatterns);
             breakdown.text = $"Patterns: {patterns}\n\n{string.Join("\n", score.BreakdownLines.Take(8))}";

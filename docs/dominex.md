@@ -5,7 +5,7 @@ The first DomiNex implementation is data-driven and centralized under `Assets/_P
 ## Current Scope
 
 - 45 DomiNex definitions are registered in `DomiNexRegistry`.
-- The prototype activates the 15 recommended test DomiNex through `PrototypeActiveIds`.
+- The prototype shop can offer DomiNex from the registry and adds bought DomiNex to the active inventory.
 - Supported hooks currently include run start, level start, and scoring.
 - Future hooks are declared as data but intentionally do nothing until the matching system exists.
 

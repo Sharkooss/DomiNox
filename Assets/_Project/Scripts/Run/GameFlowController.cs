@@ -7,6 +7,7 @@ using DomiNox.Dominex;
 using DomiNox.Grid;
 using DomiNox.Patterns;
 using DomiNox.Scoring;
+using DomiNox.Shop;
 using UnityEngine;
 
 namespace DomiNox.Run
@@ -15,6 +16,7 @@ namespace DomiNox.Run
     {
         private readonly PatternDetector patternDetector = new PatternDetector();
         private readonly DomiNexEffectEngine dominexEffectEngine = new DomiNexEffectEngine();
+        private readonly DomiNexShopService shopService = new DomiNexShopService();
         private ScoreCalculator scoreCalculator;
         private ScoreResult lastScoreResult;
         private DominoInstance selectedDomino;
@@ -36,15 +38,9 @@ namespace DomiNox.Run
         public void InitializeRun()
         {
             Run = new RunState { CurrentLevel = new LevelState() };
-            Run.DomiNexInventory.SetActive(DomiNexRegistry.GetPrototypeActiveSet());
+            Run.DomiNexInventory.SetActive(Array.Empty<DomiNexDefinition>());
             dominexEffectEngine.ApplyRunStart(Run.DomiNexInventory, Run, null);
-            dominexEffectEngine.ApplyLevelStart(Run.DomiNexInventory, Run.CurrentLevel, null);
-            Run.Bag.Initialize(DominoFactory.CreateDoubleSixSet());
-
-            foreach (var domino in Run.Bag.Draw(GameConstants.StartingHandSize))
-            {
-                Run.CurrentLevel.Hand.AddDomino(domino);
-            }
+            StartLevel(Run.CurrentLevel.LevelIndex);
 
             lastScoreResult = new ScoreResult(0, 1, new System.Collections.Generic.List<string>(), new System.Collections.Generic.List<string> { "Place des dominos puis valide." });
             Notify("Selectionne un domino.");
@@ -52,6 +48,11 @@ namespace DomiNox.Run
 
         public void SelectDomino(DominoInstance domino)
         {
+            if (Run.Phase != RunPhase.PlayingLevel)
+            {
+                return;
+            }
+
             if (Run.CurrentLevel.Hand.Contains(domino))
             {
                 if (!selectedForDiscard.Add(domino))
@@ -65,6 +66,11 @@ namespace DomiNox.Run
 
         public void BeginDragDomino(DominoInstance domino)
         {
+            if (Run.Phase != RunPhase.PlayingLevel)
+            {
+                return;
+            }
+
             if (Run.CurrentLevel.Hand.Contains(domino))
             {
                 selectedDomino = domino;
@@ -75,6 +81,12 @@ namespace DomiNox.Run
         public void DiscardSelectedDominoes()
         {
             var level = Run.CurrentLevel;
+            if (Run.Phase != RunPhase.PlayingLevel)
+            {
+                Notify("Le shop est ouvert.");
+                return;
+            }
+
             if (level.DiscardsRemaining <= 0)
             {
                 Notify("Plus aucun discard disponible.");
@@ -112,6 +124,11 @@ namespace DomiNox.Run
 
         public void ToggleOrientation()
         {
+            if (Run.Phase != RunPhase.PlayingLevel)
+            {
+                return;
+            }
+
             RotateRight();
             Notify($"Orientation: {CurrentOrientation}");
         }
@@ -138,6 +155,12 @@ namespace DomiNox.Run
         public void TryPlaceSelected(int x, int y)
         {
             var level = Run.CurrentLevel;
+            if (Run.Phase != RunPhase.PlayingLevel)
+            {
+                Notify("Le shop est ouvert.");
+                return;
+            }
+
             if (selectedDomino == null)
             {
                 Notify("Aucun domino selectionne.");
@@ -166,7 +189,7 @@ namespace DomiNox.Run
         public bool CanPlaceSelected(int x, int y)
         {
             var level = Run.CurrentLevel;
-            if (selectedDomino == null || level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || level.ActionPoints <= 0)
+            if (Run.Phase != RunPhase.PlayingLevel || selectedDomino == null || level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || level.ActionPoints <= 0)
             {
                 return false;
             }
@@ -177,6 +200,12 @@ namespace DomiNox.Run
         public void ResetPlacements()
         {
             var level = Run.CurrentLevel;
+            if (Run.Phase != RunPhase.PlayingLevel)
+            {
+                Notify("Le shop est ouvert.");
+                return;
+            }
+
             var placed = level.Grid.GetPlacedDominoes();
             level.Grid.Clear();
 
@@ -199,12 +228,99 @@ namespace DomiNox.Run
         public void ValidateScore()
         {
             var level = Run.CurrentLevel;
+            if (Run.Phase != RunPhase.PlayingLevel)
+            {
+                Notify("Le shop est ouvert.");
+                return;
+            }
+
             var dominexContext = new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.MaxPlacedDominoes);
             lastScoreResult = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext);
             level.CurrentScore = lastScoreResult.FinalScore;
             level.IsWon = level.CurrentScore >= level.Quota;
             level.IsLost = !level.IsWon;
-            Notify(level.IsWon ? "Niveau reussi." : "Score insuffisant.");
+            if (level.IsWon)
+            {
+                OpenShop();
+                Notify($"Niveau reussi. +{GameConstants.LevelWinCredits} credits. Shop ouvert.");
+                return;
+            }
+
+            Run.Phase = RunPhase.RunLost;
+            Notify("Score insuffisant.");
+        }
+
+        public void BuyShopOffer(int index)
+        {
+            if (Run.Phase != RunPhase.Shop || Run.CurrentShop == null || index < 0 || index >= Run.CurrentShop.Offers.Count)
+            {
+                return;
+            }
+
+            var offer = Run.CurrentShop.Offers[index];
+            if (offer.IsPurchased)
+            {
+                Notify("Offre deja achetee.");
+                return;
+            }
+
+            if (Run.DomiNexInventory.Contains(offer.DomiNex.Id))
+            {
+                Notify("DomiNex deja possede.");
+                return;
+            }
+
+            if (Run.Credits < offer.Price)
+            {
+                Notify("Credits insuffisants.");
+                return;
+            }
+
+            Run.Credits -= offer.Price;
+            Run.DomiNexInventory.Add(offer.DomiNex);
+            offer.MarkPurchased();
+            Notify($"DomiNex achete: {offer.DomiNex.Name}.");
+        }
+
+        public void ContinueAfterShop()
+        {
+            if (Run.Phase != RunPhase.Shop)
+            {
+                return;
+            }
+
+            StartLevel(Run.CurrentLevel.LevelIndex + 1);
+            Notify($"Niveau {Run.CurrentLevel.LevelIndex}. Quota {Run.CurrentLevel.Quota}.");
+        }
+
+        private void OpenShop()
+        {
+            Run.Credits += GameConstants.LevelWinCredits;
+            Run.CurrentShop = shopService.GenerateShop(Run.DomiNexInventory, Run.CurrentLevel.FloorIndex);
+            Run.Phase = RunPhase.Shop;
+        }
+
+        private void StartLevel(int levelIndex)
+        {
+            Run.CurrentLevel = new LevelState
+            {
+                FloorIndex = 1,
+                LevelIndex = levelIndex,
+                Quota = GameConstants.PhaseOneQuota + ((levelIndex - 1) * GameConstants.LevelQuotaIncrease)
+            };
+            Run.CurrentShop = null;
+            Run.Phase = RunPhase.PlayingLevel;
+            selectedDomino = null;
+            selectedForDiscard.Clear();
+            CurrentOrientation = DominoOrientation.HorizontalRight;
+
+            dominexEffectEngine.ApplyLevelStart(Run.DomiNexInventory, Run.CurrentLevel, null);
+            Run.Bag.Initialize(DominoFactory.CreateDoubleSixSet());
+
+            foreach (var domino in Run.Bag.Draw(GameConstants.StartingHandSize))
+            {
+                Run.CurrentLevel.Hand.AddDomino(domino);
+            }
         }
 
         private void Notify(string message)

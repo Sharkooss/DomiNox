@@ -12,5 +12,7 @@ namespace DomiNox.Core
         public const int PhaseOneActionPoints = 4;
         public const int PhaseOneMaxPlacedDominoes = 5;
         public const int PhaseOneDiscards = 3;
+        public const int LevelQuotaIncrease = 40;
+        public const int LevelWinCredits = 5;
     }
 }

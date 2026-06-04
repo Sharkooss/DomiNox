@@ -16,6 +16,7 @@ namespace DomiNox.UI
         private GridView gridView;
         private HandView handView;
         private ActionButtonsView actionButtons;
+        private ShopView shopView;
         private Text feedback;
         private Vector2 lastPointerPosition;
         private bool hasPointerPreview;
@@ -90,6 +91,11 @@ namespace DomiNox.UI
             actionButtons.GetComponent<LayoutElement>().preferredWidth = 240f;
             actionButtons.Initialize(controller);
 
+            shopView = new GameObject("Shop", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ShopView>();
+            shopView.transform.SetParent(top.transform, false);
+            shopView.GetComponent<LayoutElement>().preferredWidth = 320f;
+            shopView.Initialize(controller);
+
             feedback = UiFactory.CreateText(root.transform, "Feedback", string.Empty, 22, TextAnchor.MiddleCenter);
             feedback.color = new Color(0.95f, 0.85f, 0.42f);
 
@@ -105,6 +111,7 @@ namespace DomiNox.UI
             gridView.Render(run.CurrentLevel.Grid);
             handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation, controller.SelectedForDiscard);
             actionButtons.Render(controller);
+            shopView.Render(run);
             feedback.text = message;
             if (hasPointerPreview)
             {

@@ -14,5 +14,18 @@ namespace DomiNox.Dominex
             active.Clear();
             active.AddRange(definitions.Where(definition => definition != null));
         }
+
+        public bool Add(DomiNexDefinition definition)
+        {
+            if (definition == null || Contains(definition.Id))
+            {
+                return false;
+            }
+
+            active.Add(definition);
+            return true;
+        }
+
+        public bool Contains(string id) => active.Any(definition => definition.Id == id);
     }
 }
