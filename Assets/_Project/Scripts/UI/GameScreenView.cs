@@ -98,7 +98,7 @@ namespace DomiNox.UI
         {
             scorePanel.Render(run, score);
             gridView.Render(run.CurrentLevel.Grid);
-            handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation);
+            handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation, controller.SelectedForDiscard);
             actionButtons.Render(controller);
             feedback.text = message;
             if (hasPointerPreview)
@@ -170,7 +170,7 @@ namespace DomiNox.UI
             }
             else
             {
-                handView.Render(controller.Run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation);
+                handView.Render(controller.Run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation, controller.SelectedForDiscard);
             }
             RefreshPointerPreview();
         }

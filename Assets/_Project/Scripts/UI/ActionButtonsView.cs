@@ -20,6 +20,7 @@ namespace DomiNox.UI
             rotateButton.onClick.AddListener(controller.ToggleOrientation);
             rotateLabel = rotateButton.GetComponentInChildren<Text>();
 
+            UiFactory.CreateButton(transform, "DiscardButton", "Discard selection").onClick.AddListener(controller.DiscardSelectedDominoes);
             UiFactory.CreateButton(transform, "ResetButton", "Reset placement").onClick.AddListener(controller.ResetPlacements);
             UiFactory.CreateButton(transform, "ValidateButton", "Valider").onClick.AddListener(controller.ValidateScore);
         }

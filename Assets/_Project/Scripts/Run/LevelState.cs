@@ -11,6 +11,7 @@ namespace DomiNox.Run
         public int Quota { get; set; } = GameConstants.PhaseOneQuota;
         public int CurrentScore { get; set; }
         public int ActionPoints { get; set; } = GameConstants.PhaseOneActionPoints;
+        public int DiscardsRemaining { get; set; } = GameConstants.PhaseOneDiscards;
         public int MaxPlacedDominoes { get; set; } = GameConstants.PhaseOneMaxPlacedDominoes;
         public HandState Hand { get; }
         public GridState Grid { get; }

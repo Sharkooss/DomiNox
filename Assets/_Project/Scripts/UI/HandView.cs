@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System;
+using System.Linq;
 using DomiNox.Dominoes;
 using DomiNox.Grid;
 using DomiNox.Run;
@@ -28,7 +29,7 @@ namespace DomiNox.UI
             layout.childForceExpandWidth = false;
         }
 
-        public void Render(HandState hand, DominoInstance selected, DominoOrientation selectedOrientation)
+        public void Render(HandState hand, DominoInstance selected, DominoOrientation selectedOrientation, IReadOnlyCollection<DominoInstance> selectedForDiscard)
         {
             foreach (Transform child in transform)
             {
@@ -46,7 +47,7 @@ namespace DomiNox.UI
                 var view = go.AddComponent<DominoView>();
                 view.Initialize(domino, controller.SelectDomino, BeginDragDomino, dragged, dragEnded);
                 view.SetOrientation(domino == selected ? selectedOrientation : DominoOrientation.HorizontalRight);
-                view.SetSelected(domino == selected);
+                view.SetSelected(domino == selected || selectedForDiscard.Contains(domino));
                 views.Add(view);
             }
         }

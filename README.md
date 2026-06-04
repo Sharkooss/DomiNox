@@ -16,10 +16,12 @@ Open `Assets/_Project/Scenes/MainMenu.unity` and press Play. Click `Jouer` to lo
 
 - Draw a starting hand of 7 dominoes.
 - Select or drag a domino from the hand.
+- Click dominoes in hand to select them for discard.
 - Drop dominoes on a logical 6x6 grid with placement preview.
 - Press `A` to rotate the dragged or selected domino 90 degrees left.
 - Press `E` to rotate the dragged or selected domino 90 degrees right.
 - Reset placed dominoes back to hand.
+- Use `Discard selection` up to 3 times to replace selected hand dominoes.
 - Validate the level and compare the score to quota 80.
 - See basic pattern detection and scoring breakdown.
 

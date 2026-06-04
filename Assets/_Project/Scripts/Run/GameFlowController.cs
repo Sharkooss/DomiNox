@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using DomiNox.Core;
 using DomiNox.Dominoes;
 using DomiNox.Grid;
@@ -14,12 +16,14 @@ namespace DomiNox.Run
         private ScoreCalculator scoreCalculator;
         private ScoreResult lastScoreResult;
         private DominoInstance selectedDomino;
+        private readonly HashSet<DominoInstance> selectedForDiscard = new HashSet<DominoInstance>();
 
         public event Action<RunState, ScoreResult, string> StateChanged;
 
         public RunState Run { get; private set; }
         public DominoOrientation CurrentOrientation { get; private set; } = DominoOrientation.HorizontalRight;
         public DominoInstance SelectedDomino => selectedDomino;
+        public IReadOnlyCollection<DominoInstance> SelectedForDiscard => selectedForDiscard;
 
         private void Awake()
         {
@@ -45,8 +49,12 @@ namespace DomiNox.Run
         {
             if (Run.CurrentLevel.Hand.Contains(domino))
             {
-                selectedDomino = domino;
-                Notify($"Domino selectionne: {domino}");
+                if (!selectedForDiscard.Add(domino))
+                {
+                    selectedForDiscard.Remove(domino);
+                }
+
+                Notify($"Selection discard: {selectedForDiscard.Count} domino(s).");
             }
         }
 
@@ -55,7 +63,41 @@ namespace DomiNox.Run
             if (Run.CurrentLevel.Hand.Contains(domino))
             {
                 selectedDomino = domino;
+                selectedForDiscard.Remove(domino);
             }
+        }
+
+        public void DiscardSelectedDominoes()
+        {
+            var level = Run.CurrentLevel;
+            if (level.DiscardsRemaining <= 0)
+            {
+                Notify("Plus aucun discard disponible.");
+                return;
+            }
+
+            if (selectedForDiscard.Count == 0)
+            {
+                Notify("Selectionne au moins un domino a discard.");
+                return;
+            }
+
+            var discarded = selectedForDiscard.Where(level.Hand.Contains).ToList();
+            foreach (var domino in discarded)
+            {
+                level.Hand.RemoveDomino(domino);
+                Run.Bag.Discard(domino);
+            }
+
+            foreach (var domino in Run.Bag.Draw(discarded.Count))
+            {
+                level.Hand.AddDomino(domino);
+            }
+
+            level.DiscardsRemaining--;
+            selectedForDiscard.Clear();
+            selectedDomino = null;
+            Notify($"{discarded.Count} domino(s) discard. {level.DiscardsRemaining} discard(s) restant(s).");
         }
 
         public void ToggleOrientation()
@@ -134,6 +176,7 @@ namespace DomiNox.Run
             }
 
             selectedDomino = null;
+            selectedForDiscard.Clear();
             level.ActionPoints = GameConstants.PhaseOneActionPoints;
             level.CurrentScore = 0;
             level.IsWon = false;

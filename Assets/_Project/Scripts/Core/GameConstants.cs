@@ -11,5 +11,6 @@ namespace DomiNox.Core
         public const int StartingCredits = 10;
         public const int PhaseOneActionPoints = 4;
         public const int PhaseOneMaxPlacedDominoes = 5;
+        public const int PhaseOneDiscards = 3;
     }
 }
