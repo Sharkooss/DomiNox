@@ -109,7 +109,7 @@ namespace DomiNox.UI
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(720f, 500f);
+            rect.sizeDelta = new Vector2(840f, 520f);
             patternOverlay.GetComponent<Image>().color = new Color(0.07f, 0.09f, 0.12f, 0.98f);
             var outline = patternOverlay.GetComponent<Outline>();
             outline.effectColor = new Color(0.35f, 0.5f, 0.62f);
@@ -136,15 +136,28 @@ namespace DomiNox.UI
             intro.color = new Color(0.7f, 0.76f, 0.84f);
             intro.GetComponent<LayoutElement>().preferredHeight = 28f;
 
-            patternListRoot = new GameObject("PatternList", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement)).transform;
+            patternListRoot = new GameObject("PatternList", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement)).transform;
             patternListRoot.SetParent(patternOverlay.transform, false);
             patternListRoot.GetComponent<LayoutElement>().flexibleHeight = 1f;
-            var listLayout = patternListRoot.GetComponent<VerticalLayoutGroup>();
-            listLayout.spacing = 8f;
+            var listLayout = patternListRoot.GetComponent<HorizontalLayoutGroup>();
+            listLayout.spacing = 10f;
+            listLayout.childForceExpandWidth = true;
 
-            foreach (var pattern in PatternCatalog.All)
+            var valueColumn = CreatePatternColumn("Valeur");
+            foreach (var pattern in PatternCatalog.ValuePatterns)
             {
-                CreatePatternRow(pattern);
+                CreatePatternRow(valueColumn, pattern, 37f);
+            }
+
+            var designColumn = CreatePatternColumn("Design / Bonus");
+            foreach (var pattern in PatternCatalog.DesignPatterns)
+            {
+                CreatePatternRow(designColumn, pattern, 54f);
+            }
+
+            foreach (var pattern in PatternCatalog.BonusPatterns)
+            {
+                CreatePatternRow(designColumn, pattern, 54f);
             }
 
             patternOverlay.SetActive(false);
@@ -156,25 +169,77 @@ namespace DomiNox.UI
             patternOverlay.transform.SetAsLastSibling();
         }
 
-        private void CreatePatternRow(PatternInfo pattern)
+        private Transform CreatePatternColumn(string title)
         {
-            var row = new GameObject($"Pattern_{pattern.Name}", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(VerticalLayoutGroup), typeof(LayoutElement));
-            row.transform.SetParent(patternListRoot, false);
+            var column = new GameObject($"{title}Column", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            column.transform.SetParent(patternListRoot, false);
+            column.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var layout = column.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 5f;
+            var titleText = UiFactory.CreateText(column.transform, "Title", title, 15, TextAnchor.MiddleCenter);
+            titleText.color = new Color(0.98f, 0.84f, 0.34f);
+            titleText.GetComponent<LayoutElement>().preferredHeight = 24f;
+            return column.transform;
+        }
+
+        private void CreatePatternRow(Transform parent, PatternInfo pattern, float height)
+        {
+            var row = new GameObject($"Pattern_{pattern.Name}", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            row.transform.SetParent(parent, false);
             row.GetComponent<Image>().color = new Color(0.1f, 0.12f, 0.16f, 0.96f);
             var outline = row.GetComponent<Outline>();
             outline.effectColor = new Color(0.18f, 0.24f, 0.32f);
             outline.effectDistance = new Vector2(2f, -2f);
-            row.GetComponent<LayoutElement>().preferredHeight = 72f;
-            var layout = row.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(10, 10, 7, 7);
-            layout.spacing = 3f;
+            row.GetComponent<LayoutElement>().preferredHeight = height;
+            var layout = row.GetComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(7, 7, 4, 4);
+            layout.spacing = 7f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childForceExpandWidth = false;
 
-            var name = UiFactory.CreateText(row.transform, "Name", pattern.Name, 16, TextAnchor.MiddleLeft);
+            CreatePatternDiagram(row.transform, pattern);
+
+            var content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            content.transform.SetParent(row.transform, false);
+            content.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var contentLayout = content.GetComponent<VerticalLayoutGroup>();
+            contentLayout.spacing = 1f;
+
+            var name = UiFactory.CreateText(content.transform, "Name", pattern.Name, 12, TextAnchor.MiddleLeft);
             name.color = new Color(0.98f, 0.84f, 0.34f);
-            var requirement = UiFactory.CreateText(row.transform, "Requirement", $"Comment l'obtenir: {pattern.Requirement}", 12, TextAnchor.MiddleLeft);
+            var requirement = UiFactory.CreateText(content.transform, "Requirement", pattern.Requirement, 10, TextAnchor.MiddleLeft);
             requirement.color = new Color(0.78f, 0.84f, 0.92f);
-            var effect = UiFactory.CreateText(row.transform, "Effect", $"Effet: {pattern.Effect}", 12, TextAnchor.MiddleLeft);
+            var effect = UiFactory.CreateText(content.transform, "Effect", pattern.Effect, 10, TextAnchor.MiddleLeft);
             effect.color = new Color(0.58f, 0.78f, 1f);
+        }
+
+        private void CreatePatternDiagram(Transform parent, PatternInfo pattern)
+        {
+            var diagram = new GameObject("Diagram", typeof(RectTransform), typeof(GridLayoutGroup), typeof(LayoutElement));
+            diagram.transform.SetParent(parent, false);
+            var layout = diagram.GetComponent<LayoutElement>();
+            layout.preferredWidth = 39f;
+            layout.preferredHeight = 39f;
+            var grid = diagram.GetComponent<GridLayoutGroup>();
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 3;
+            grid.cellSize = new Vector2(11f, 11f);
+            grid.spacing = new Vector2(2f, 2f);
+
+            var rows = pattern.DiagramRows.Length == 0 ? new[] { "...", ".X.", "..." } : pattern.DiagramRows;
+            for (var y = 0; y < 3; y++)
+            {
+                var row = y < rows.Length ? rows[y] : "...";
+                for (var x = 0; x < 3; x++)
+                {
+                    var marker = x < row.Length ? row[x] : '.';
+                    var cell = new GameObject($"Cell_{x}_{y}", typeof(RectTransform), typeof(Image));
+                    cell.transform.SetParent(diagram.transform, false);
+                    cell.GetComponent<Image>().color = marker == '.'
+                        ? new Color(0.16f, 0.19f, 0.24f, 0.9f)
+                        : new Color(0.28f, 0.58f, 1f, 0.95f);
+                }
+            }
         }
 
         private Transform CreateSection(string name, float height, Color color)
