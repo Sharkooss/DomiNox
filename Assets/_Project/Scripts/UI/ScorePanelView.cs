@@ -26,10 +26,14 @@ namespace DomiNox.UI
         {
             var layout = gameObject.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(0, 0, 0, 0);
-            layout.spacing = 8f;
+            layout.spacing = 7f;
             layout.childAlignment = TextAnchor.UpperLeft;
 
-            var blind = CreateSection("BlindSection", 88f, new Color(0.1f, 0.12f, 0.15f));
+            var logo = CreateSection("LogoSection", 54f, new Color(0.08f, 0.1f, 0.14f));
+            var logoText = UiFactory.CreateText(logo, "Logo", "DomiNox", 20, TextAnchor.MiddleCenter);
+            logoText.color = new Color(0.98f, 0.84f, 0.34f);
+
+            var blind = CreateSection("BlindSection", 78f, new Color(0.1f, 0.12f, 0.15f));
             blindTitle = UiFactory.CreateText(blind, "BlindTitle", string.Empty, 16, TextAnchor.MiddleCenter);
             blindTitle.color = new Color(1f, 0.78f, 0.25f);
             blindScore = UiFactory.CreateText(blind, "BlindScore", string.Empty, 14, TextAnchor.MiddleCenter);

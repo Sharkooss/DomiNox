@@ -27,8 +27,8 @@ namespace DomiNox.UI
             var layout = gameObject.AddComponent<GridLayoutGroup>();
             layout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             layout.constraintCount = GameConstants.GridWidth;
-            layout.cellSize = new Vector2(56f, 56f);
-            layout.spacing = new Vector2(3f, 3f);
+            layout.cellSize = new Vector2(68f, 68f);
+            layout.spacing = new Vector2(4f, 4f);
 
             for (var y = 0; y < GameConstants.GridHeight; y++)
             {

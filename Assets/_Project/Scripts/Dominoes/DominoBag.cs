@@ -50,5 +50,8 @@ namespace DomiNox.Dominoes
         }
 
         public int RemainingCount() => drawPile.Count;
+
+        public IReadOnlyList<DominoInstance> RemainingDominoes => drawPile;
+        public IReadOnlyList<DominoInstance> DiscardedDominoes => discardPile;
     }
 }
