@@ -210,7 +210,7 @@ namespace DomiNox.UI
             gridPanel.SetActive(isPlaying);
             actionButtons.gameObject.SetActive(isPlaying);
             handPanel.SetActive(isPlaying);
-            rightUtilityPanel.SetActive(isPlaying);
+            rightUtilityPanel.SetActive(true);
             shopView.gameObject.SetActive(isShop);
             modalOverlayRoot.SetActive(isReward || isLost);
             if (isReward || isLost)
@@ -221,27 +221,35 @@ namespace DomiNox.UI
             runLostView.gameObject.SetActive(isLost);
 
             scorePanel.Render(run, score);
+            bagPanel.Render(run);
             if (isPlaying)
             {
                 gridView.Render(run.CurrentLevel.Grid);
                 handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation, controller.SelectedForDiscard);
                 actionButtons.Render(controller);
-                bagPanel.Render(run);
                 utilityInfo.text = $"Rotation\nA/E : {controller.CurrentOrientation}\n\nControle\nDrag un domino vers la grille.\nClique un domino pour le marquer en defausse.";
+            }
+
+            if (isShop)
+            {
+                utilityInfo.text = "Shop\nAchete un DomiNex ou passe au niveau suivant.\n\nLa reserve reste disponible pour verifier le sac.";
             }
 
             if (isReward)
             {
                 levelRewardView.Render(run);
+                utilityInfo.text = "Cash Out\nRecupere tes credits avant d'ouvrir le shop.\n\nLes bonus viennent des discards restants et des interets.";
             }
 
             if (isLost)
             {
                 runLostView.Render(run);
+                utilityInfo.text = "Run perdue\nRetourne au menu principal pour relancer une partie.";
             }
 
             shopView.Render(run);
             dominexBar.Render(run);
+            feedback.gameObject.SetActive(isPlaying || isShop);
             feedback.text = message;
             if (!isShop && hasPointerPreview)
             {
