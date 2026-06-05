@@ -48,14 +48,25 @@ namespace DomiNox.Bosses
                 lockedDominoCount: 2)
         };
 
-        public static BossDefinition GetForLevel(int levelIndex)
+        public static BossDefinition GetForLevel(int levelIndex, System.Random random = null, string previousBossId = null)
         {
             if (levelIndex <= 0 || levelIndex % 5 != 0)
             {
                 return null;
             }
 
-            return DemoBosses[((levelIndex / 5) - 1) % DemoBosses.Length];
+            if (random == null)
+            {
+                return DemoBosses[((levelIndex / 5) - 1) % DemoBosses.Length];
+            }
+
+            var candidates = DemoBosses;
+            if (!string.IsNullOrWhiteSpace(previousBossId) && DemoBosses.Length > 1)
+            {
+                candidates = System.Array.FindAll(DemoBosses, boss => boss.Id != previousBossId);
+            }
+
+            return candidates[random.Next(0, candidates.Length)];
         }
     }
 }

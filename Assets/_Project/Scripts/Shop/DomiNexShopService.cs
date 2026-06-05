@@ -15,6 +15,7 @@ namespace DomiNox.Shop
             var shop = new ShopState();
             var candidates = DomiNexRegistry.All
                 .Where(definition => definition.Rarity != DomiNexRarity.Cursed)
+                .Where(DomiNexRegistry.IsAvailableInPrototypeShop)
                 .Where(definition => !inventory.Contains(definition.Id))
                 .ToList();
 

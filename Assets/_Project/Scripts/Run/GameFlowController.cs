@@ -389,7 +389,7 @@ namespace DomiNox.Run
 
         private void StartLevel(int levelIndex)
         {
-            var bossDefinition = BossRegistry.GetForLevel(levelIndex);
+            var bossDefinition = BossRegistry.GetForLevel(levelIndex, random, Run.PreviousBossId);
             var quota = GameConstants.PhaseOneQuota + ((levelIndex - 1) * GameConstants.LevelQuotaIncrease);
             if (bossDefinition != null)
             {
@@ -403,6 +403,10 @@ namespace DomiNox.Run
                 Quota = quota,
                 Boss = bossDefinition == null ? null : new BossLevelState(bossDefinition)
             };
+            if (bossDefinition != null)
+            {
+                Run.PreviousBossId = bossDefinition.Id;
+            }
             Run.CurrentShop = null;
             Run.CurrentReward = null;
             Run.Phase = RunPhase.PlayingLevel;

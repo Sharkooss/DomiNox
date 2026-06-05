@@ -26,10 +26,7 @@ namespace DomiNox.Patterns
             new PatternInfo(PatternNames.Line, PatternCategory.Design, "Toutes les cases jouees forment une ligne horizontale ou verticale.", "+20 Chips.", 20, 0, 20, "XXX", "...", "...")
         };
 
-        public static IReadOnlyList<PatternInfo> BonusPatterns { get; } = new[]
-        {
-            new PatternInfo(PatternNames.NoxHand, PatternCategory.Bonus, "Utiliser exactement la limite de pose du niveau.", "+50 Chips, +3 Mult.", 50, 3, 10, "MAX", "...", "...")
-        };
+        public static IReadOnlyList<PatternInfo> BonusPatterns { get; } = new PatternInfo[0];
 
         public static IReadOnlyList<PatternInfo> All { get; } = BuildAll();
 

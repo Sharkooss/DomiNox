@@ -14,5 +14,6 @@ namespace DomiNox.Run
         public ShopState CurrentShop { get; set; }
         public LevelRewardState CurrentReward { get; set; }
         public RunPhase Phase { get; set; } = RunPhase.PlayingLevel;
+        public string PreviousBossId { get; set; }
     }
 }

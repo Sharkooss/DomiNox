@@ -49,11 +49,6 @@ namespace DomiNox.Patterns
                 patterns.Add(design);
             }
 
-            if (placedDominoes.Count == maxPlacedDominoes)
-            {
-                patterns.Add(PatternCatalog.GetByName(PatternNames.NoxHand));
-            }
-
             return patterns.Where(pattern => pattern != null && !disabled.Contains(ToPatternId(pattern.Name))).ToList();
         }
 

@@ -35,8 +35,7 @@ Current flow:
 2. Base Mult = 1.
 3. Add the best value pattern bonus.
 4. Add the best design pattern bonus if detected.
-5. Add compatible bonus patterns such as `Nox Hand`.
-6. Apply active DomiNex scoring effects.
+5. Apply active DomiNex scoring effects.
 
 ## Value Patterns
 
@@ -53,7 +52,7 @@ Current flow:
 | Low Roll | Tous les dominos joués ont une somme de 5 ou moins. | 20 | 4 | 15 |
 | High Tile | Pattern par défaut si aucun autre pattern de valeur n'est retenu. | 10 | 0 | 0 |
 
-## Design / Bonus Patterns
+## Design Patterns
 
 | Pattern | Type | Requirement | Count Bonus | Mult Bonus | Priority |
 | --- | --- | --- | ---: | ---: | ---: |
@@ -61,11 +60,12 @@ Current flow:
 | Snake | Design | La forme change de direction au moins 2 fois sans se couper. | 25 | 2 | 50 |
 | Corner | Design | La forme fait exactement un angle à 90 degrés. | 0 | 2 | 30 |
 | Line | Design | Toutes les cases jouées forment une ligne horizontale ou verticale. | 20 | 0 | 20 |
-| Nox Hand | Bonus | Utiliser exactement la limite de pose du niveau. | 50 | 3 | 10 |
+
+`Nox Hand` a ete retire temporairement: poser toute la limite etait trop simple et rendait le bonus automatique.
 
 ## Bosses Demo
 
-Les boss apparaissent tous les 5 niveaux. Le boss actif est choisi dans `BossRegistry.DemoBosses` avec rotation sur le pool.
+Les boss apparaissent tous les 5 niveaux. Le boss actif est choisi aleatoirement dans `BossRegistry.DemoBosses`, en evitant de reprendre le meme boss deux fois de suite quand c'est possible.
 
 | Boss | Rule Type | Effet | Quota |
 | --- | --- | --- | ---: |
@@ -97,23 +97,23 @@ Les boss apparaissent tous les 5 niveaux. Le boss actif est choisi dans `BossReg
 | fond_de_sac | Fond de Sac | Common | draw, mult | Futur: dernier domino pioché donne +3 Mult s'il est joué. |
 | petite_mise | Petite Mise | Common | low, mult | Dominos de somme <= 4 donnent +1 Mult. |
 | gros_jeton | Gros Jeton | Common | high, count | Dominos de somme >= 10 donnent +5 Count. |
-| main_propre | Main Propre | Common | discard, mult | Si aucune défausse pendant le niveau, +3 Mult. |
+| main_propre | Main Propre | Common | discard, mult | Si aucune défausse pendant le niveau, +2 Mult. |
 | dernier_coup | Dernier Coup | Common | count, order | Le dernier domino joué donne +10 Count. |
-| premiere_pose | Premiere Pose | Common | mult, order | Le premier domino joué donne +2 Mult. |
+| premiere_pose | Premiere Pose | Common | mult, order | Le premier domino joué donne +1 Mult. |
 | suite_facile | Suite Facile | Common | pattern, mult | Futur: suites courtes donnent +2 Mult supplémentaire. |
 | economie_mineure | Economie Mineure | Common | economy | Futur: intérêts commencent à 8 crédits au lieu de 10. |
 | domino_poli | Domino Poli | Common | gold, count | Futur: dominos dorés donnent +1 Count supplémentaire. |
 | reroll_leger | Reroll Leger | Common | discard, comfort | Futur: première défausse de chaque niveau ne consomme pas de discard. |
 | poche_secrete | Poche Secrete | Common | hand | Futur: +1 taille de main au premier niveau de chaque étage. |
-| chaine_courte | Chaine Courte | Common | mult, placed | Si exactement 3 dominos joués, +4 Mult. |
+| chaine_courte | Chaine Courte | Common | mult, placed | Si exactement 3 dominos joués, +3 Mult. |
 | coup_sur | Coup Sur | Common | credits, precision | Futur: dépassement quota < 20% donne +1 crédit. |
 | double_ou_rien | Double ou Rien | Rare | double, risk | +2 Mult par double. Futur: malus quota si aucun double. |
 | banque_noire | Banque Noire | Rare | credits, mult | +1 Mult par tranche de 10 crédits possédés. |
 | tapis_bleu | Tapis Bleu | Rare | blue, discard | Futur: premier domino bleu joué rend 1 discard, une fois par niveau. |
-| full_nox_rare | Full Nox | Rare | full, mult | Si limite maximale de dominos utilisée, +10 Mult. |
-| jackpot_7_rare | Jackpot 7 | Rare | seven, mult, credits | Dominos de somme 7 donnent +2 Mult. Futur: 3 joués donne +4 crédits. |
-| limite_souple | Limite Souple | Rare | limit, count | +1 domino jouable, -1 Count par domino joué. |
-| main_serree | Main Serree | Rare | limit, mult | -1 domino jouable, +6 Mult. |
+| full_nox_rare | Full Nox | Rare | full, mult | Temporairement désactivé: bonus trop automatique avec la limite de pose. |
+| jackpot_7_rare | Jackpot 7 | Rare | seven, mult, credits | Dominos de somme 7 donnent +1 Mult. Futur: 3 joués donne +4 crédits. |
+| limite_souple | Limite Souple | Rare | limit, count | +1 domino jouable, -5 Count par domino joué. |
+| main_serree | Main Serree | Rare | limit, mult | -1 domino jouable, +4 Mult. |
 | marchandage | Marchandage | Rare | shop, economy | Futur: shops coûtent 1 crédit de moins, minimum 1. |
 | casino_bleu | Casino Bleu | Rare | blue, count, mult | Futur: dominos bleus donnent +5 Count et +1 Mult. |
 | casino_rouge | Casino Rouge | Rare | red, risk | Futur: dominos rouges donnent +12 Count, coût si niveau raté. |
@@ -124,8 +124,8 @@ Les boss apparaissent tous les 5 niveaux. Le boss actif est choisi dans `BossReg
 | architecte_du_casino | Architecte du Casino | Epic | pattern, mult | Futur: suites longues et équilibre donnent deux fois plus de Mult. |
 | sac_dore | Sac Dore | Epic | gold, credits | Futur: dominos dorés donnent +2 crédits au lieu de +1. |
 | limite_brisee | Limite Brisee | Epic | limit, discard | +1 domino jouable. Futur: -1 discard. |
-| haute_mise_epic | Haute Mise | Epic | high, count, mult | Dominos de somme >= 10 donnent +5 Count et +1 Mult. |
-| petite_fortune | Petite Fortune | Epic | low, mult | Dominos de somme <= 4 donnent +3 Mult. |
+| haute_mise_epic | Haute Mise | Epic | high, count, mult | Dominos de somme >= 10 donnent +4 Count et +1 Mult. |
+| petite_fortune | Petite Fortune | Epic | low, mult | Dominos de somme <= 4 donnent +2 Mult. |
 | jackpot_instable | Jackpot Instable | Epic | seven, risk | Futur: jackpot donne x1.5 score final, prochain shop +20%. |
 | oeil_du_croupier | Oeil du Croupier | Epic | draw, planning | Futur: voir les 3 prochains dominos du sac. |
 | domino_fantome | Domino Fantome | Epic | copy, limit | Futur: premier domino copié en fantôme hors limite. |
@@ -137,7 +137,9 @@ Les boss apparaissent tous les 5 niveaux. Le boss actif est choisi dans `BossReg
 
 ## Shop Notes
 
-Le shop actuel génère 3 offres DomiNex pondérées par rareté et exclut les DomiNex déjà possédés. Les DomiNex maudits ne sont pas dans le pool normal pour l'instant.
+Le shop actuel génère 3 offres DomiNex pondérées par rareté et exclut les DomiNex déjà possédés. Les DomiNex maudits ne sont pas dans le pool normal pour l'instant. Le shop prototype exclut aussi les DomiNex sans effet actuel et les DomiNex temporairement désactivés.
+
+Temporarily disabled: `domino_poli`, `tapis_bleu`, `casino_bleu`, `casino_rouge`, `mise_verte`, `sac_dore`, `full_nox_rare`, `limite_brisee`.
 
 ## Reward / Cash Out
 
