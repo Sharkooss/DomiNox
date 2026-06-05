@@ -22,7 +22,10 @@ namespace DomiNox.UI
         private Text placedValue;
         private Text breakdown;
         private GameObject patternOverlay;
-        private Transform patternListRoot;
+        private Button valuePatternsTab;
+        private Button designPatternsTab;
+        private GameObject valuePatternsPage;
+        private GameObject designPatternsPage;
 
         public void Initialize()
         {
@@ -109,15 +112,15 @@ namespace DomiNox.UI
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(840f, 520f);
+            rect.sizeDelta = new Vector2(980f, 650f);
             patternOverlay.GetComponent<Image>().color = new Color(0.07f, 0.09f, 0.12f, 0.98f);
             var outline = patternOverlay.GetComponent<Outline>();
             outline.effectColor = new Color(0.35f, 0.5f, 0.62f);
             outline.effectDistance = new Vector2(3f, -3f);
 
             var layout = patternOverlay.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(16, 16, 14, 16);
-            layout.spacing = 10f;
+            layout.padding = new RectOffset(24, 24, 18, 22);
+            layout.spacing = 12f;
 
             var header = new GameObject("Header", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             header.transform.SetParent(patternOverlay.transform, false);
@@ -132,34 +135,44 @@ namespace DomiNox.UI
             close.GetComponent<LayoutElement>().preferredWidth = 110f;
             close.onClick.AddListener(() => patternOverlay.SetActive(false));
 
-            var intro = UiFactory.CreateText(patternOverlay.transform, "Intro", "Ces patterns sont detectes automatiquement quand tu valides ton score.", 13, TextAnchor.MiddleLeft);
+            var intro = UiFactory.CreateText(patternOverlay.transform, "Intro", "Les patterns sont detectes automatiquement a la validation. Le scoring retient le meilleur pattern de valeur, le meilleur design, puis les bonus compatibles.", 13, TextAnchor.MiddleLeft);
             intro.color = new Color(0.7f, 0.76f, 0.84f);
-            intro.GetComponent<LayoutElement>().preferredHeight = 28f;
+            intro.GetComponent<LayoutElement>().preferredHeight = 36f;
 
-            patternListRoot = new GameObject("PatternList", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement)).transform;
-            patternListRoot.SetParent(patternOverlay.transform, false);
-            patternListRoot.GetComponent<LayoutElement>().flexibleHeight = 1f;
-            var listLayout = patternListRoot.GetComponent<HorizontalLayoutGroup>();
-            listLayout.spacing = 10f;
-            listLayout.childForceExpandWidth = true;
+            var tabs = new GameObject("Tabs", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            tabs.transform.SetParent(patternOverlay.transform, false);
+            tabs.GetComponent<LayoutElement>().preferredHeight = 44f;
+            var tabsLayout = tabs.GetComponent<HorizontalLayoutGroup>();
+            tabsLayout.spacing = 10f;
+            tabsLayout.childAlignment = TextAnchor.MiddleLeft;
+            tabsLayout.childForceExpandWidth = false;
+            valuePatternsTab = CreateTabButton(tabs.transform, "Patterns de valeur");
+            designPatternsTab = CreateTabButton(tabs.transform, "Patterns de design");
+            valuePatternsTab.onClick.AddListener(() => ShowPatternTab(true));
+            designPatternsTab.onClick.AddListener(() => ShowPatternTab(false));
 
-            var valueColumn = CreatePatternColumn("Valeur");
+            var pagesRoot = new GameObject("Pages", typeof(RectTransform), typeof(LayoutElement));
+            pagesRoot.transform.SetParent(patternOverlay.transform, false);
+            pagesRoot.GetComponent<LayoutElement>().flexibleHeight = 1f;
+
+            var valueContent = CreatePatternScrollPage(pagesRoot.transform, "ValuePatternsPage", out valuePatternsPage);
             foreach (var pattern in PatternCatalog.ValuePatterns)
             {
-                CreatePatternRow(valueColumn, pattern, 37f);
+                CreatePatternRow(valueContent, pattern, 78f, false);
             }
 
-            var designColumn = CreatePatternColumn("Design / Bonus");
+            var designContent = CreatePatternScrollPage(pagesRoot.transform, "DesignPatternsPage", out designPatternsPage);
             foreach (var pattern in PatternCatalog.DesignPatterns)
             {
-                CreatePatternRow(designColumn, pattern, 54f);
+                CreatePatternRow(designContent, pattern, 94f, true);
             }
 
             foreach (var pattern in PatternCatalog.BonusPatterns)
             {
-                CreatePatternRow(designColumn, pattern, 54f);
+                CreatePatternRow(designContent, pattern, 94f, true);
             }
 
+            ShowPatternTab(true);
             patternOverlay.SetActive(false);
         }
 
@@ -169,20 +182,59 @@ namespace DomiNox.UI
             patternOverlay.transform.SetAsLastSibling();
         }
 
-        private Transform CreatePatternColumn(string title)
+        private Button CreateTabButton(Transform parent, string label)
         {
-            var column = new GameObject($"{title}Column", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
-            column.transform.SetParent(patternListRoot, false);
-            column.GetComponent<LayoutElement>().flexibleWidth = 1f;
-            var layout = column.GetComponent<VerticalLayoutGroup>();
-            layout.spacing = 5f;
-            var titleText = UiFactory.CreateText(column.transform, "Title", title, 15, TextAnchor.MiddleCenter);
-            titleText.color = new Color(0.98f, 0.84f, 0.34f);
-            titleText.GetComponent<LayoutElement>().preferredHeight = 24f;
-            return column.transform;
+            var button = UiFactory.CreateButton(parent, $"{label}Tab", label);
+            button.GetComponent<LayoutElement>().preferredWidth = 210f;
+            return button;
         }
 
-        private void CreatePatternRow(Transform parent, PatternInfo pattern, float height)
+        private Transform CreatePatternScrollPage(Transform parent, string name, out GameObject page)
+        {
+            page = new GameObject(name, typeof(RectTransform), typeof(ScrollRect), typeof(LayoutElement));
+            page.transform.SetParent(parent, false);
+            Stretch((RectTransform)page.transform);
+            page.GetComponent<LayoutElement>().flexibleHeight = 1f;
+
+            var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
+            viewport.transform.SetParent(page.transform, false);
+            Stretch((RectTransform)viewport.transform);
+            viewport.GetComponent<Image>().color = new Color(0.05f, 0.07f, 0.1f, 0.35f);
+            viewport.GetComponent<Mask>().showMaskGraphic = false;
+
+            var content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            content.transform.SetParent(viewport.transform, false);
+            var contentRect = (RectTransform)content.transform;
+            contentRect.anchorMin = new Vector2(0f, 1f);
+            contentRect.anchorMax = Vector2.one;
+            contentRect.pivot = new Vector2(0.5f, 1f);
+            contentRect.offsetMin = new Vector2(0f, 0f);
+            contentRect.offsetMax = new Vector2(0f, 0f);
+
+            var contentLayout = content.GetComponent<VerticalLayoutGroup>();
+            contentLayout.padding = new RectOffset(4, 12, 4, 12);
+            contentLayout.spacing = 10f;
+            content.GetComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            var scroll = page.GetComponent<ScrollRect>();
+            scroll.viewport = (RectTransform)viewport.transform;
+            scroll.content = contentRect;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 28f;
+            return content.transform;
+        }
+
+        private void ShowPatternTab(bool showValuePatterns)
+        {
+            valuePatternsPage.SetActive(showValuePatterns);
+            designPatternsPage.SetActive(!showValuePatterns);
+            valuePatternsTab.GetComponent<Image>().color = showValuePatterns ? new Color(0.24f, 0.34f, 0.5f) : new Color(0.18f, 0.22f, 0.28f);
+            designPatternsTab.GetComponent<Image>().color = showValuePatterns ? new Color(0.18f, 0.22f, 0.28f) : new Color(0.24f, 0.34f, 0.5f);
+        }
+
+        private void CreatePatternRow(Transform parent, PatternInfo pattern, float height, bool showDiagram)
         {
             var row = new GameObject($"Pattern_{pattern.Name}", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             row.transform.SetParent(parent, false);
@@ -192,24 +244,27 @@ namespace DomiNox.UI
             outline.effectDistance = new Vector2(2f, -2f);
             row.GetComponent<LayoutElement>().preferredHeight = height;
             var layout = row.GetComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(7, 7, 4, 4);
-            layout.spacing = 7f;
+            layout.padding = new RectOffset(14, 14, 10, 10);
+            layout.spacing = 12f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childForceExpandWidth = false;
 
-            CreatePatternDiagram(row.transform, pattern);
+            if (showDiagram)
+            {
+                CreatePatternDiagram(row.transform, pattern);
+            }
 
             var content = new GameObject("Content", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
             content.transform.SetParent(row.transform, false);
             content.GetComponent<LayoutElement>().flexibleWidth = 1f;
             var contentLayout = content.GetComponent<VerticalLayoutGroup>();
-            contentLayout.spacing = 1f;
+            contentLayout.spacing = 4f;
 
-            var name = UiFactory.CreateText(content.transform, "Name", pattern.Name, 12, TextAnchor.MiddleLeft);
+            var name = UiFactory.CreateText(content.transform, "Name", pattern.Name, 16, TextAnchor.MiddleLeft);
             name.color = new Color(0.98f, 0.84f, 0.34f);
-            var requirement = UiFactory.CreateText(content.transform, "Requirement", pattern.Requirement, 10, TextAnchor.MiddleLeft);
+            var requirement = UiFactory.CreateText(content.transform, "Requirement", pattern.Requirement, 12, TextAnchor.MiddleLeft);
             requirement.color = new Color(0.78f, 0.84f, 0.92f);
-            var effect = UiFactory.CreateText(content.transform, "Effect", pattern.Effect, 10, TextAnchor.MiddleLeft);
+            var effect = UiFactory.CreateText(content.transform, "Effect", pattern.Effect, 12, TextAnchor.MiddleLeft);
             effect.color = new Color(0.58f, 0.78f, 1f);
         }
 
@@ -256,6 +311,14 @@ namespace DomiNox.UI
             layout.spacing = 5f;
             layout.childAlignment = TextAnchor.UpperCenter;
             return section.transform;
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         private Text CreateFormulaPill(Transform parent, string name, Color color)
