@@ -1,5 +1,5 @@
 using System.Linq;
-using DomiNox.Dominex;
+using DomiNox.Patterns;
 using DomiNox.Run;
 using DomiNox.Scoring;
 using DomiNox.Utilities;
@@ -21,6 +21,8 @@ namespace DomiNox.UI
         private Text creditsValue;
         private Text placedValue;
         private Text breakdown;
+        private GameObject patternOverlay;
+        private Transform patternListRoot;
 
         public void Initialize()
         {
@@ -61,7 +63,21 @@ namespace DomiNox.UI
 
             var details = CreateSection("DetailsSection", 0f, new Color(0.07f, 0.09f, 0.12f));
             details.GetComponent<LayoutElement>().flexibleHeight = 1f;
+            var patternHeader = new GameObject("PatternHeader", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            patternHeader.transform.SetParent(details, false);
+            patternHeader.GetComponent<LayoutElement>().preferredHeight = 26f;
+            var patternHeaderLayout = patternHeader.GetComponent<HorizontalLayoutGroup>();
+            patternHeaderLayout.spacing = 6f;
+            patternHeaderLayout.childAlignment = TextAnchor.MiddleCenter;
+            var patternTitle = UiFactory.CreateText(patternHeader.transform, "Title", "Patterns", 13, TextAnchor.MiddleLeft);
+            patternTitle.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var infoButton = UiFactory.CreateButton(patternHeader.transform, "InfoButton", "?");
+            infoButton.GetComponent<LayoutElement>().preferredWidth = 28f;
+            infoButton.GetComponent<LayoutElement>().preferredHeight = 24f;
+            infoButton.onClick.AddListener(ShowPatternOverlay);
             breakdown = UiFactory.CreateText(details, "Breakdown", string.Empty, 12, TextAnchor.UpperLeft);
+
+            BuildPatternOverlay();
         }
 
         public void Render(RunState run, ScoreResult score)
@@ -81,7 +97,84 @@ namespace DomiNox.UI
             placedValue.text = $"{placed}/{level.MaxPlacedDominoes}";
 
             var patterns = score.DetectedPatterns.Count == 0 ? "Aucun pattern" : string.Join(", ", score.DetectedPatterns);
-            breakdown.text = $"Patterns\n{patterns}\n\n{string.Join("\n", score.BreakdownLines.Take(5))}";
+            breakdown.text = $"{patterns}\n\n{string.Join("\n", score.BreakdownLines.Take(5))}";
+        }
+
+        private void BuildPatternOverlay()
+        {
+            var canvas = GetComponentInParent<Canvas>();
+            patternOverlay = new GameObject("PatternHelpOverlay", typeof(RectTransform), typeof(Image), typeof(Outline));
+            patternOverlay.transform.SetParent(canvas.transform, false);
+            var rect = (RectTransform)patternOverlay.transform;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(720f, 500f);
+            patternOverlay.GetComponent<Image>().color = new Color(0.07f, 0.09f, 0.12f, 0.98f);
+            var outline = patternOverlay.GetComponent<Outline>();
+            outline.effectColor = new Color(0.35f, 0.5f, 0.62f);
+            outline.effectDistance = new Vector2(3f, -3f);
+
+            var layout = patternOverlay.AddComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(16, 16, 14, 16);
+            layout.spacing = 10f;
+
+            var header = new GameObject("Header", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            header.transform.SetParent(patternOverlay.transform, false);
+            header.GetComponent<LayoutElement>().preferredHeight = 40f;
+            var headerLayout = header.GetComponent<HorizontalLayoutGroup>();
+            headerLayout.childAlignment = TextAnchor.MiddleCenter;
+
+            var title = UiFactory.CreateText(header.transform, "Title", "Patterns actuels", 20, TextAnchor.MiddleLeft);
+            title.color = new Color(0.98f, 0.84f, 0.34f);
+            title.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var close = UiFactory.CreateButton(header.transform, "Close", "Fermer");
+            close.GetComponent<LayoutElement>().preferredWidth = 110f;
+            close.onClick.AddListener(() => patternOverlay.SetActive(false));
+
+            var intro = UiFactory.CreateText(patternOverlay.transform, "Intro", "Ces patterns sont detectes automatiquement quand tu valides ton score.", 13, TextAnchor.MiddleLeft);
+            intro.color = new Color(0.7f, 0.76f, 0.84f);
+            intro.GetComponent<LayoutElement>().preferredHeight = 28f;
+
+            patternListRoot = new GameObject("PatternList", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement)).transform;
+            patternListRoot.SetParent(patternOverlay.transform, false);
+            patternListRoot.GetComponent<LayoutElement>().flexibleHeight = 1f;
+            var listLayout = patternListRoot.GetComponent<VerticalLayoutGroup>();
+            listLayout.spacing = 8f;
+
+            foreach (var pattern in PatternCatalog.All)
+            {
+                CreatePatternRow(pattern);
+            }
+
+            patternOverlay.SetActive(false);
+        }
+
+        private void ShowPatternOverlay()
+        {
+            patternOverlay.SetActive(true);
+            patternOverlay.transform.SetAsLastSibling();
+        }
+
+        private void CreatePatternRow(PatternInfo pattern)
+        {
+            var row = new GameObject($"Pattern_{pattern.Name}", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            row.transform.SetParent(patternListRoot, false);
+            row.GetComponent<Image>().color = new Color(0.1f, 0.12f, 0.16f, 0.96f);
+            var outline = row.GetComponent<Outline>();
+            outline.effectColor = new Color(0.18f, 0.24f, 0.32f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            row.GetComponent<LayoutElement>().preferredHeight = 72f;
+            var layout = row.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(10, 10, 7, 7);
+            layout.spacing = 3f;
+
+            var name = UiFactory.CreateText(row.transform, "Name", pattern.Name, 16, TextAnchor.MiddleLeft);
+            name.color = new Color(0.98f, 0.84f, 0.34f);
+            var requirement = UiFactory.CreateText(row.transform, "Requirement", $"Comment l'obtenir: {pattern.Requirement}", 12, TextAnchor.MiddleLeft);
+            requirement.color = new Color(0.78f, 0.84f, 0.92f);
+            var effect = UiFactory.CreateText(row.transform, "Effect", $"Effet: {pattern.Effect}", 12, TextAnchor.MiddleLeft);
+            effect.color = new Color(0.58f, 0.78f, 1f);
         }
 
         private Transform CreateSection(string name, float height, Color color)
