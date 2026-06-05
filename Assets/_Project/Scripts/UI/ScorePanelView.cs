@@ -121,12 +121,16 @@ namespace DomiNox.UI
             var layout = patternOverlay.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(24, 24, 18, 22);
             layout.spacing = 12f;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
 
             var header = new GameObject("Header", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             header.transform.SetParent(patternOverlay.transform, false);
             header.GetComponent<LayoutElement>().preferredHeight = 40f;
             var headerLayout = header.GetComponent<HorizontalLayoutGroup>();
             headerLayout.childAlignment = TextAnchor.MiddleCenter;
+            headerLayout.childForceExpandWidth = false;
+            headerLayout.childForceExpandHeight = false;
 
             var title = UiFactory.CreateText(header.transform, "Title", "Patterns actuels", 20, TextAnchor.MiddleLeft);
             title.color = new Color(0.98f, 0.84f, 0.34f);
@@ -146,6 +150,7 @@ namespace DomiNox.UI
             tabsLayout.spacing = 10f;
             tabsLayout.childAlignment = TextAnchor.MiddleLeft;
             tabsLayout.childForceExpandWidth = false;
+            tabsLayout.childForceExpandHeight = false;
             valuePatternsTab = CreateTabButton(tabs.transform, "Patterns de valeur");
             designPatternsTab = CreateTabButton(tabs.transform, "Patterns de design");
             valuePatternsTab.onClick.AddListener(() => ShowPatternTab(true));
@@ -186,6 +191,7 @@ namespace DomiNox.UI
         {
             var button = UiFactory.CreateButton(parent, $"{label}Tab", label);
             button.GetComponent<LayoutElement>().preferredWidth = 210f;
+            button.GetComponent<LayoutElement>().preferredHeight = 40f;
             return button;
         }
 
@@ -195,6 +201,7 @@ namespace DomiNox.UI
             page.transform.SetParent(parent, false);
             Stretch((RectTransform)page.transform);
             page.GetComponent<LayoutElement>().flexibleHeight = 1f;
+            page.GetComponent<LayoutElement>().preferredHeight = 420f;
 
             var viewport = new GameObject("Viewport", typeof(RectTransform), typeof(Image), typeof(Mask));
             viewport.transform.SetParent(page.transform, false);
