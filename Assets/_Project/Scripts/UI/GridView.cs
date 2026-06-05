@@ -101,13 +101,13 @@ namespace DomiNox.UI
                 var dominoCells = new List<GridPosition>(GridState.GetCells(placed.Position, placed.Orientation));
                 if (GridState.IsHorizontal(placed.Orientation))
                 {
-                    frames[dominoCells[0]] = new DominoCellFrame(true, false, true, true, true, false);
-                    frames[dominoCells[1]] = new DominoCellFrame(true, true, true, false, false, false);
+                    frames[dominoCells[0]] = new DominoCellFrame(true, false, true, true, true, false, true, false);
+                    frames[dominoCells[1]] = new DominoCellFrame(true, true, true, false, false, false, false, false);
                 }
                 else
                 {
-                    frames[dominoCells[0]] = new DominoCellFrame(true, true, false, true, false, true);
-                    frames[dominoCells[1]] = new DominoCellFrame(false, true, true, true, false, false);
+                    frames[dominoCells[0]] = new DominoCellFrame(true, true, false, true, false, true, false, true);
+                    frames[dominoCells[1]] = new DominoCellFrame(false, true, true, true, false, false, false, false);
                 }
             }
 
