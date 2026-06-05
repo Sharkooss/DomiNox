@@ -30,6 +30,7 @@ namespace DomiNox.Run
         public DominoOrientation CurrentOrientation { get; private set; } = DominoOrientation.HorizontalRight;
         public DominoInstance SelectedDomino => selectedDomino;
         public IReadOnlyCollection<DominoInstance> SelectedForDiscard => selectedForDiscard;
+        public bool BossIntroActive { get; private set; }
 
         private void Awake()
         {
@@ -50,7 +51,7 @@ namespace DomiNox.Run
 
         public void SelectDomino(DominoInstance domino)
         {
-            if (Run.Phase != RunPhase.PlayingLevel)
+            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive)
             {
                 return;
             }
@@ -74,7 +75,7 @@ namespace DomiNox.Run
 
         public void BeginDragDomino(DominoInstance domino)
         {
-            if (Run.Phase != RunPhase.PlayingLevel)
+            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive)
             {
                 return;
             }
@@ -98,6 +99,11 @@ namespace DomiNox.Run
             if (Run.Phase != RunPhase.PlayingLevel)
             {
                 Notify("Le shop est ouvert.");
+                return;
+            }
+
+            if (BossIntroActive)
+            {
                 return;
             }
 
@@ -145,7 +151,7 @@ namespace DomiNox.Run
 
         public void ToggleOrientation()
         {
-            if (Run.Phase != RunPhase.PlayingLevel)
+            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive)
             {
                 return;
             }
@@ -182,6 +188,11 @@ namespace DomiNox.Run
                 return;
             }
 
+            if (BossIntroActive)
+            {
+                return;
+            }
+
             if (selectedDomino == null)
             {
                 Notify("Aucun domino selectionne.");
@@ -215,7 +226,7 @@ namespace DomiNox.Run
         public bool CanPlaceSelected(int x, int y)
         {
             var level = Run.CurrentLevel;
-            if (Run.Phase != RunPhase.PlayingLevel || selectedDomino == null || level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || IsBannedByBoss(selectedDomino))
+            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive || selectedDomino == null || level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || IsBannedByBoss(selectedDomino))
             {
                 return false;
             }
@@ -236,6 +247,11 @@ namespace DomiNox.Run
             if (Run.Phase != RunPhase.PlayingLevel)
             {
                 Notify("Le shop est ouvert.");
+                return;
+            }
+
+            if (BossIntroActive)
+            {
                 return;
             }
 
@@ -263,6 +279,11 @@ namespace DomiNox.Run
             if (Run.Phase != RunPhase.PlayingLevel)
             {
                 Notify("Le shop est ouvert.");
+                return;
+            }
+
+            if (BossIntroActive)
+            {
                 return;
             }
 
@@ -338,6 +359,18 @@ namespace DomiNox.Run
             Notify($"Niveau {Run.CurrentLevel.LevelIndex}. Quota {Run.CurrentLevel.Quota}.");
         }
 
+        public void CompleteBossIntro()
+        {
+            if (!BossIntroActive)
+            {
+                return;
+            }
+
+            BossIntroActive = false;
+            var boss = Run.CurrentLevel.Boss;
+            Notify(boss == null ? "Niveau lance." : boss.GetEffectSummary());
+        }
+
         private void OpenShop()
         {
             Run.CurrentShop = shopService.GenerateShop(Run.DomiNexInventory, Run.CurrentLevel.FloorIndex);
@@ -376,6 +409,7 @@ namespace DomiNox.Run
             selectedDomino = null;
             selectedForDiscard.Clear();
             CurrentOrientation = DominoOrientation.HorizontalRight;
+            BossIntroActive = bossDefinition != null;
 
             dominexEffectEngine.ApplyLevelStart(Run.DomiNexInventory, Run.CurrentLevel, null);
             ApplyBossLevelStart(Run.CurrentLevel);

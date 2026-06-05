@@ -20,6 +20,7 @@ namespace DomiNox.UI
         private BagPanelView bagPanel;
         private LevelRewardView levelRewardView;
         private RunLostView runLostView;
+        private BossIntroView bossIntroView;
         private ShopView shopView;
         private LayoutElement shopLayout;
         private Text feedback;
@@ -51,7 +52,7 @@ namespace DomiNox.UI
 
         private void Update()
         {
-            if (controller.Run.Phase != RunPhase.PlayingLevel)
+            if (controller.Run.Phase != RunPhase.PlayingLevel || controller.BossIntroActive)
             {
                 return;
             }
@@ -161,6 +162,11 @@ namespace DomiNox.UI
             Stretch(modalOverlayRoot.GetComponent<RectTransform>());
             modalOverlayRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.28f);
 
+            bossIntroView = new GameObject("BossIntroView", typeof(RectTransform)).AddComponent<BossIntroView>();
+            bossIntroView.transform.SetParent(canvas.transform, false);
+            Stretch((RectTransform)bossIntroView.transform);
+            bossIntroView.Initialize(controller);
+
             levelRewardView = new GameObject("LevelRewardView", typeof(RectTransform), typeof(LayoutElement)).AddComponent<LevelRewardView>();
             levelRewardView.transform.SetParent(modalOverlayRoot.transform, false);
             var rewardRect = (RectTransform)levelRewardView.transform;
@@ -222,6 +228,7 @@ namespace DomiNox.UI
 
             scorePanel.Render(run, score);
             bagPanel.Render(run);
+            bossIntroView.Render(run);
             if (isPlaying)
             {
                 gridView.Render(run.CurrentLevel.Grid);
@@ -284,10 +291,16 @@ namespace DomiNox.UI
             gridView.Render(controller.Run.CurrentLevel.Grid);
         }
 
-        private void SetActiveDragView(DominoView dominoView)
+        private bool SetActiveDragView(DominoView dominoView)
         {
+            if (controller.SelectedDomino == null || controller.BossIntroActive)
+            {
+                return false;
+            }
+
             activeDragView = dominoView;
             activeDragView.SetOrientation(controller.CurrentOrientation);
+            return true;
         }
 
         private void RefreshPointerPreview()

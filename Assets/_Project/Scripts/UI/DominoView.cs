@@ -19,8 +19,11 @@ namespace DomiNox.UI
         private Text label;
         private DominoInstance domino;
         private DominoOrientation orientation = DominoOrientation.HorizontalRight;
+        private bool isSelected;
+        private bool isBanned;
+        private bool isLocked;
         private Action<DominoInstance> clicked;
-        private Action<DominoInstance, DominoView> dragStarted;
+        private Func<DominoInstance, DominoView, bool> dragStarted;
         private Action<Vector2> dragged;
         private Action<Vector2> dragEnded;
         private GameObject dragGhost;
@@ -30,7 +33,7 @@ namespace DomiNox.UI
         public void Initialize(
             DominoInstance dominoInstance,
             Action<DominoInstance> onClicked,
-            Action<DominoInstance, DominoView> onDragStarted,
+            Func<DominoInstance, DominoView, bool> onDragStarted,
             Action<Vector2> onDragged,
             Action<Vector2> onDragEnded)
         {
@@ -52,35 +55,55 @@ namespace DomiNox.UI
 
         public void SetSelected(bool selected)
         {
-            if (background != null)
-            {
-                background.color = selected ? new Color(1f, 0.86f, 0.25f) : Color.white;
-            }
+            isSelected = selected;
+            ApplyVisualState();
         }
 
         public void SetBossState(bool banned, bool locked)
+        {
+            isBanned = banned;
+            isLocked = locked;
+            ApplyVisualState();
+        }
+
+        private void ApplyVisualState()
         {
             if (background == null || label == null)
             {
                 return;
             }
 
-            if (banned)
+            label.color = Color.black;
+            label.text = GetDisplayText();
+
+            if (isSelected && isBanned)
+            {
+                background.color = new Color(1f, 0.48f, 0.34f);
+                label.color = Color.black;
+                return;
+            }
+
+            if (isSelected)
+            {
+                background.color = new Color(1f, 0.86f, 0.25f);
+                return;
+            }
+
+            if (isBanned)
             {
                 background.color = new Color(0.32f, 0.32f, 0.36f);
                 label.color = new Color(0.72f, 0.72f, 0.78f);
                 return;
             }
 
-            if (locked)
+            if (isLocked)
             {
                 background.color = new Color(0.72f, 0.84f, 1f);
-                label.color = Color.black;
                 label.text = $"{GetDisplayText()}\nLOCK";
                 return;
             }
 
-            label.color = Color.black;
+            background.color = Color.white;
         }
 
         public void SetOrientation(DominoOrientation dominoOrientation)
@@ -96,7 +119,11 @@ namespace DomiNox.UI
 
         public void OnBeginDrag(PointerEventData eventData)
         {
-            dragStarted?.Invoke(domino, this);
+            if (dragStarted?.Invoke(domino, this) != true)
+            {
+                return;
+            }
+
             CreateDragGhost(eventData.position);
             dragged?.Invoke(eventData.position);
         }
@@ -198,7 +225,7 @@ namespace DomiNox.UI
                 return;
             }
 
-            label.text = GetDisplayText();
+            ApplyVisualState();
             ApplyRectOrientation((RectTransform)transform, label.rectTransform);
 
             if (dragGhostLabel != null && dragGhostRect != null)

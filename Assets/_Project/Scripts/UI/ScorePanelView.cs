@@ -4,6 +4,7 @@ using DomiNox.Run;
 using DomiNox.Scoring;
 using DomiNox.Utilities;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace DomiNox.UI
@@ -20,6 +21,8 @@ namespace DomiNox.UI
         private Text creditsValue;
         private Text placedValue;
         private Text bossValue;
+        private GameObject bossTooltip;
+        private Text bossTooltipText;
         private Text breakdown;
         private GameObject patternOverlay;
         private Button valuePatternsTab;
@@ -63,6 +66,7 @@ namespace DomiNox.UI
             creditsValue = CreateMetric(resources, "Credits", "Credits");
             placedValue = CreateMetric(resources, "Placed", "Placed");
             bossValue = CreateMetric(resources, "Boss", "Boss");
+            BuildBossTooltip();
 
             var details = CreateSection("DetailsSection", 0f, new Color(0.07f, 0.09f, 0.12f));
             details.GetComponent<LayoutElement>().flexibleHeight = 1f;
@@ -98,9 +102,61 @@ namespace DomiNox.UI
             creditsValue.text = $"${run.Credits}";
             placedValue.text = $"{placed}/{level.MaxPlacedDominoes}";
             bossValue.text = level.Boss == null ? "-" : level.Boss.Definition.Name;
+            bossValue.color = level.Boss == null ? Color.white : new Color(1f, 0.72f, 0.28f);
+            bossTooltipText.text = level.Boss == null ? "Aucun boss actif." : level.Boss.GetEffectSummary();
 
             var patterns = score.DetectedPatterns.Count == 0 ? "Aucun pattern" : string.Join(", ", score.DetectedPatterns);
             breakdown.text = $"{patterns}\n\n{string.Join("\n", score.BreakdownLines.Take(5))}";
+        }
+
+        private void BuildBossTooltip()
+        {
+            var trigger = bossValue.gameObject.AddComponent<EventTrigger>();
+            AddHoverEvent(trigger, EventTriggerType.PointerEnter, () => SetBossTooltipVisible(true));
+            AddHoverEvent(trigger, EventTriggerType.PointerExit, () => SetBossTooltipVisible(false));
+
+            var canvas = GetComponentInParent<Canvas>();
+            bossTooltip = new GameObject("BossTooltip", typeof(RectTransform), typeof(Image), typeof(Outline));
+            bossTooltip.transform.SetParent(canvas.transform, false);
+            var rect = (RectTransform)bossTooltip.transform;
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(260f, 40f);
+            rect.sizeDelta = new Vector2(360f, 126f);
+            bossTooltip.GetComponent<Image>().color = new Color(0.08f, 0.06f, 0.08f, 0.98f);
+            var outline = bossTooltip.GetComponent<Outline>();
+            outline.effectColor = new Color(1f, 0.35f, 0.22f);
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            bossTooltipText = UiFactory.CreateText(bossTooltip.transform, "Text", string.Empty, 14, TextAnchor.MiddleLeft);
+            bossTooltipText.color = new Color(0.94f, 0.9f, 0.82f);
+            bossTooltipText.rectTransform.anchorMin = Vector2.zero;
+            bossTooltipText.rectTransform.anchorMax = Vector2.one;
+            bossTooltipText.rectTransform.offsetMin = new Vector2(14f, 10f);
+            bossTooltipText.rectTransform.offsetMax = new Vector2(-14f, -10f);
+            bossTooltip.SetActive(false);
+        }
+
+        private static void AddHoverEvent(EventTrigger trigger, EventTriggerType eventType, UnityEngine.Events.UnityAction action)
+        {
+            var entry = new EventTrigger.Entry { eventID = eventType };
+            entry.callback.AddListener(_ => action());
+            trigger.triggers.Add(entry);
+        }
+
+        private void SetBossTooltipVisible(bool visible)
+        {
+            if (bossTooltip == null)
+            {
+                return;
+            }
+
+            bossTooltip.SetActive(visible && bossValue.text != "-");
+            if (bossTooltip.activeSelf)
+            {
+                bossTooltip.transform.SetAsLastSibling();
+            }
         }
 
         private void BuildPatternOverlay()

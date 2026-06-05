@@ -15,9 +15,9 @@ namespace DomiNox.UI
         private GameFlowController controller;
         private Action<Vector2> dragged;
         private Action<Vector2> dragEnded;
-        private Action<DominoView> dragViewStarted;
+        private Func<DominoView, bool> dragViewStarted;
 
-        public void Initialize(GameFlowController flowController, Action<DominoView> onDragViewStarted, Action<Vector2> onDragged, Action<Vector2> onDragEnded)
+        public void Initialize(GameFlowController flowController, Func<DominoView, bool> onDragViewStarted, Action<Vector2> onDragged, Action<Vector2> onDragEnded)
         {
             controller = flowController;
             dragViewStarted = onDragViewStarted;
@@ -53,10 +53,15 @@ namespace DomiNox.UI
             }
         }
 
-        private void BeginDragDomino(DominoInstance domino, DominoView view)
+        private bool BeginDragDomino(DominoInstance domino, DominoView view)
         {
             controller.BeginDragDomino(domino);
-            dragViewStarted?.Invoke(view);
+            if (controller.SelectedDomino != domino)
+            {
+                return false;
+            }
+
+            return dragViewStarted?.Invoke(view) == true;
         }
     }
 }
