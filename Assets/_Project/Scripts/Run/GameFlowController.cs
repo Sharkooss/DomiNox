@@ -248,13 +248,25 @@ namespace DomiNox.Run
             level.IsLost = !level.IsWon;
             if (level.IsWon)
             {
-                OpenShop();
-                Notify($"Niveau reussi. +{GameConstants.LevelWinCredits} credits. Shop ouvert.");
+                OpenLevelReward();
+                Notify("Niveau reussi. Cash out disponible.");
                 return;
             }
 
             Run.Phase = RunPhase.RunLost;
             Notify("Score insuffisant.");
+        }
+
+        public void CashOutReward()
+        {
+            if (Run.Phase != RunPhase.LevelReward || Run.CurrentReward == null)
+            {
+                return;
+            }
+
+            Run.Credits += Run.CurrentReward.TotalCredits;
+            OpenShop();
+            Notify($"Cash out: +{Run.CurrentReward.TotalCredits} credits. Shop ouvert.");
         }
 
         public void BuyShopOffer(int index)
@@ -302,9 +314,18 @@ namespace DomiNox.Run
 
         private void OpenShop()
         {
-            Run.Credits += GameConstants.LevelWinCredits;
             Run.CurrentShop = shopService.GenerateShop(Run.DomiNexInventory, Run.CurrentLevel.FloorIndex);
+            Run.CurrentReward = null;
             Run.Phase = RunPhase.Shop;
+        }
+
+        private void OpenLevelReward()
+        {
+            var level = Run.CurrentLevel;
+            var discardCredits = level.DiscardsRemaining * GameConstants.CreditsPerRemainingDiscard;
+            var interestCredits = System.Math.Min(GameConstants.MaxInterestCredits, Run.Credits / GameConstants.InterestCreditStep);
+            Run.CurrentReward = new LevelRewardState(GameConstants.LevelWinCredits, discardCredits, interestCredits);
+            Run.Phase = RunPhase.LevelReward;
         }
 
         private void StartLevel(int levelIndex)
@@ -316,6 +337,7 @@ namespace DomiNox.Run
                 Quota = GameConstants.PhaseOneQuota + ((levelIndex - 1) * GameConstants.LevelQuotaIncrease)
             };
             Run.CurrentShop = null;
+            Run.CurrentReward = null;
             Run.Phase = RunPhase.PlayingLevel;
             selectedDomino = null;
             selectedForDiscard.Clear();

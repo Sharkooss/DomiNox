@@ -14,5 +14,8 @@ namespace DomiNox.Core
         public const int PhaseOneDiscards = 3;
         public const int LevelQuotaIncrease = 40;
         public const int LevelWinCredits = 5;
+        public const int CreditsPerRemainingDiscard = 1;
+        public const int InterestCreditStep = 5;
+        public const int MaxInterestCredits = 5;
     }
 }

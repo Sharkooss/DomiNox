@@ -12,6 +12,7 @@ namespace DomiNox.Run
         public DomiNexInventory DomiNexInventory { get; } = new DomiNexInventory();
         public LevelState CurrentLevel { get; set; }
         public ShopState CurrentShop { get; set; }
+        public LevelRewardState CurrentReward { get; set; }
         public RunPhase Phase { get; set; } = RunPhase.PlayingLevel;
     }
 }

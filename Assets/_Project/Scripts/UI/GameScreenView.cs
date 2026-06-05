@@ -18,6 +18,8 @@ namespace DomiNox.UI
         private HandView handView;
         private ActionButtonsView actionButtons;
         private BagPanelView bagPanel;
+        private LevelRewardView levelRewardView;
+        private RunLostView runLostView;
         private ShopView shopView;
         private LayoutElement shopLayout;
         private Text feedback;
@@ -26,6 +28,7 @@ namespace DomiNox.UI
         private GameObject gridPanel;
         private GameObject handPanel;
         private GameObject rightUtilityPanel;
+        private GameObject modalOverlayRoot;
         private Vector2 lastPointerPosition;
         private bool hasPointerPreview;
         private DominoView activeDragView;
@@ -153,6 +156,28 @@ namespace DomiNox.UI
             shopLayout.flexibleHeight = 1f;
             shopView.Initialize(controller);
 
+            modalOverlayRoot = new GameObject("ModalOverlayRoot", typeof(RectTransform));
+            modalOverlayRoot.transform.SetParent(centerGameplayPanel.transform, false);
+            Stretch(modalOverlayRoot.GetComponent<RectTransform>());
+
+            levelRewardView = new GameObject("LevelRewardView", typeof(RectTransform), typeof(LayoutElement)).AddComponent<LevelRewardView>();
+            levelRewardView.transform.SetParent(modalOverlayRoot.transform, false);
+            var rewardRect = (RectTransform)levelRewardView.transform;
+            rewardRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rewardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rewardRect.pivot = new Vector2(0.5f, 0.5f);
+            rewardRect.sizeDelta = new Vector2(560f, 470f);
+            levelRewardView.Initialize(controller);
+
+            runLostView = new GameObject("RunLostView", typeof(RectTransform), typeof(LayoutElement)).AddComponent<RunLostView>();
+            runLostView.transform.SetParent(modalOverlayRoot.transform, false);
+            var lostRect = (RectTransform)runLostView.transform;
+            lostRect.anchorMin = new Vector2(0.5f, 0.5f);
+            lostRect.anchorMax = new Vector2(0.5f, 0.5f);
+            lostRect.pivot = new Vector2(0.5f, 0.5f);
+            lostRect.sizeDelta = new Vector2(520f, 360f);
+            runLostView.Initialize();
+
             feedback = UiFactory.CreateText(centerGameplayPanel.transform, "Feedback", string.Empty, 18, TextAnchor.MiddleCenter);
             feedback.color = new Color(0.95f, 0.85f, 0.42f);
 
@@ -178,20 +203,36 @@ namespace DomiNox.UI
         private void Render(RunState run, ScoreResult score, string message)
         {
             var isShop = run.Phase == RunPhase.Shop;
-            gridPanel.SetActive(!isShop);
-            actionButtons.gameObject.SetActive(!isShop);
-            handPanel.SetActive(!isShop);
-            rightUtilityPanel.SetActive(!isShop);
+            var isPlaying = run.Phase == RunPhase.PlayingLevel;
+            var isReward = run.Phase == RunPhase.LevelReward;
+            var isLost = run.Phase == RunPhase.RunLost;
+            gridPanel.SetActive(isPlaying);
+            actionButtons.gameObject.SetActive(isPlaying);
+            handPanel.SetActive(isPlaying);
+            rightUtilityPanel.SetActive(isPlaying);
             shopView.gameObject.SetActive(isShop);
+            modalOverlayRoot.SetActive(isReward || isLost);
+            levelRewardView.gameObject.SetActive(isReward);
+            runLostView.gameObject.SetActive(isLost);
 
             scorePanel.Render(run, score);
-            if (!isShop)
+            if (isPlaying)
             {
                 gridView.Render(run.CurrentLevel.Grid);
                 handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation, controller.SelectedForDiscard);
                 actionButtons.Render(controller);
                 bagPanel.Render(run);
                 utilityInfo.text = $"Rotation\nA/E : {controller.CurrentOrientation}\n\nControle\nDrag un domino vers la grille.\nClique un domino pour le marquer en defausse.";
+            }
+
+            if (isReward)
+            {
+                levelRewardView.Render(run);
+            }
+
+            if (isLost)
+            {
+                runLostView.Render(run);
             }
 
             shopView.Render(run);
