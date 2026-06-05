@@ -79,7 +79,7 @@ namespace DomiNox.UI
 
             dominexBar = new GameObject("DomiNexBar", typeof(RectTransform), typeof(LayoutElement)).AddComponent<DomiNexBarView>();
             dominexBar.transform.SetParent(root.transform, false);
-            dominexBar.GetComponent<LayoutElement>().preferredHeight = 76f;
+            dominexBar.GetComponent<LayoutElement>().preferredHeight = 58f;
             dominexBar.Initialize();
 
             var top = new GameObject("Top", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
@@ -88,10 +88,14 @@ namespace DomiNox.UI
             var topLayout = top.GetComponent<HorizontalLayoutGroup>();
             topLayout.spacing = 10f;
             topLayout.childAlignment = TextAnchor.MiddleCenter;
+            topLayout.childForceExpandWidth = false;
 
             scorePanel = new GameObject("ScorePanel", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ScorePanelView>();
             scorePanel.transform.SetParent(top.transform, false);
-            scorePanel.GetComponent<LayoutElement>().preferredWidth = 230f;
+            var scoreLayout = scorePanel.GetComponent<LayoutElement>();
+            scoreLayout.preferredWidth = 180f;
+            scoreLayout.preferredHeight = 1f;
+            scoreLayout.flexibleHeight = 1f;
             scorePanel.Initialize();
 
             gridView = new GameObject("Grid", typeof(RectTransform), typeof(LayoutElement)).AddComponent<GridView>();
@@ -101,7 +105,7 @@ namespace DomiNox.UI
 
             actionButtons = new GameObject("Actions", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ActionButtonsView>();
             actionButtons.transform.SetParent(top.transform, false);
-            actionButtons.GetComponent<LayoutElement>().preferredWidth = 180f;
+            actionButtons.GetComponent<LayoutElement>().preferredWidth = 156f;
             actionButtons.Initialize(controller);
 
             shopView = new GameObject("Shop", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ShopView>();

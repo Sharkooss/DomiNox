@@ -16,28 +16,33 @@ namespace DomiNox.UI
 
         public void Initialize(string emptyText)
         {
+            Initialize(emptyText, false);
+        }
+
+        public void Initialize(string emptyText, bool compact)
+        {
             var background = gameObject.AddComponent<Image>();
             background.color = new Color(0.08f, 0.1f, 0.13f, 0.98f);
             outline = gameObject.AddComponent<Outline>();
-            outline.effectDistance = new Vector2(4f, -4f);
+            outline.effectDistance = compact ? new Vector2(2f, -2f) : new Vector2(4f, -4f);
             outline.effectColor = new Color(0.35f, 0.38f, 0.44f);
 
             var layout = gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(12, 12, 12, 12);
-            layout.spacing = 8f;
+            layout.padding = compact ? new RectOffset(8, 8, 7, 7) : new RectOffset(12, 12, 12, 12);
+            layout.spacing = compact ? 4f : 8f;
             layout.childAlignment = TextAnchor.UpperCenter;
 
-            nameText = UiFactory.CreateText(transform, "Name", emptyText, 20, TextAnchor.MiddleCenter);
+            nameText = UiFactory.CreateText(transform, "Name", emptyText, compact ? 15 : 20, TextAnchor.MiddleCenter);
             rarityBackground = new GameObject("RarityBadge", typeof(RectTransform), typeof(Image), typeof(LayoutElement)).GetComponent<Image>();
             rarityBackground.transform.SetParent(transform, false);
-            rarityBackground.GetComponent<LayoutElement>().preferredHeight = 28f;
-            rarityText = UiFactory.CreateText(rarityBackground.transform, "Rarity", string.Empty, 14, TextAnchor.MiddleCenter);
+            rarityBackground.GetComponent<LayoutElement>().preferredHeight = compact ? 18f : 28f;
+            rarityText = UiFactory.CreateText(rarityBackground.transform, "Rarity", string.Empty, compact ? 10 : 14, TextAnchor.MiddleCenter);
             rarityText.color = Color.black;
             Stretch(rarityText.rectTransform);
 
-            descriptionText = UiFactory.CreateText(transform, "Description", string.Empty, 14, TextAnchor.UpperLeft);
+            descriptionText = UiFactory.CreateText(transform, "Description", string.Empty, compact ? 11 : 14, TextAnchor.UpperLeft);
             descriptionText.GetComponent<LayoutElement>().flexibleHeight = 1f;
-            tagsText = UiFactory.CreateText(transform, "Tags", string.Empty, 12, TextAnchor.LowerCenter);
+            tagsText = UiFactory.CreateText(transform, "Tags", string.Empty, compact ? 10 : 12, TextAnchor.LowerCenter);
             tagsText.color = new Color(0.65f, 0.72f, 0.8f);
 
             Render(null, emptyText);
