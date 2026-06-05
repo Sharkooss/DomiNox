@@ -17,6 +17,7 @@ namespace DomiNox.UI
         private HandView handView;
         private ActionButtonsView actionButtons;
         private ShopView shopView;
+        private LayoutElement shopLayout;
         private Text feedback;
         private Vector2 lastPointerPosition;
         private bool hasPointerPreview;
@@ -40,6 +41,11 @@ namespace DomiNox.UI
 
         private void Update()
         {
+            if (controller.Run.Phase != RunPhase.PlayingLevel)
+            {
+                return;
+            }
+
             if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
             {
                 RotateSelection(true);
@@ -93,7 +99,9 @@ namespace DomiNox.UI
 
             shopView = new GameObject("Shop", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ShopView>();
             shopView.transform.SetParent(top.transform, false);
-            shopView.GetComponent<LayoutElement>().preferredWidth = 320f;
+            shopLayout = shopView.GetComponent<LayoutElement>();
+            shopLayout.preferredWidth = 760f;
+            shopLayout.flexibleWidth = 1f;
             shopView.Initialize(controller);
 
             feedback = UiFactory.CreateText(root.transform, "Feedback", string.Empty, 22, TextAnchor.MiddleCenter);
@@ -107,13 +115,23 @@ namespace DomiNox.UI
 
         private void Render(RunState run, ScoreResult score, string message)
         {
+            var isShop = run.Phase == RunPhase.Shop;
+            gridView.gameObject.SetActive(!isShop);
+            actionButtons.gameObject.SetActive(!isShop);
+            handView.gameObject.SetActive(!isShop);
+            shopView.gameObject.SetActive(isShop);
+
             scorePanel.Render(run, score);
-            gridView.Render(run.CurrentLevel.Grid);
-            handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation, controller.SelectedForDiscard);
-            actionButtons.Render(controller);
+            if (!isShop)
+            {
+                gridView.Render(run.CurrentLevel.Grid);
+                handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation, controller.SelectedForDiscard);
+                actionButtons.Render(controller);
+            }
+
             shopView.Render(run);
             feedback.text = message;
-            if (hasPointerPreview)
+            if (!isShop && hasPointerPreview)
             {
                 RefreshPointerPreview();
             }

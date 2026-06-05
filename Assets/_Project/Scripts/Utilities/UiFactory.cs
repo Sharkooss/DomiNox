@@ -7,7 +7,7 @@ namespace DomiNox.Utilities
     {
         public static Text CreateText(Transform parent, string name, string value, int fontSize = 22, TextAnchor alignment = TextAnchor.MiddleLeft)
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(Text));
+            var go = new GameObject(name, typeof(RectTransform), typeof(Text), typeof(LayoutElement));
             go.transform.SetParent(parent, false);
             var text = go.GetComponent<Text>();
             text.text = value;
@@ -15,6 +15,8 @@ namespace DomiNox.Utilities
             text.fontSize = fontSize;
             text.alignment = alignment;
             text.color = Color.white;
+            text.horizontalOverflow = HorizontalWrapMode.Wrap;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
             return text;
         }
 
