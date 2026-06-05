@@ -156,9 +156,10 @@ namespace DomiNox.UI
             shopLayout.flexibleHeight = 1f;
             shopView.Initialize(controller);
 
-            modalOverlayRoot = new GameObject("ModalOverlayRoot", typeof(RectTransform));
-            modalOverlayRoot.transform.SetParent(centerGameplayPanel.transform, false);
+            modalOverlayRoot = new GameObject("ModalOverlayRoot", typeof(RectTransform), typeof(Image));
+            modalOverlayRoot.transform.SetParent(canvas.transform, false);
             Stretch(modalOverlayRoot.GetComponent<RectTransform>());
+            modalOverlayRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.28f);
 
             levelRewardView = new GameObject("LevelRewardView", typeof(RectTransform), typeof(LayoutElement)).AddComponent<LevelRewardView>();
             levelRewardView.transform.SetParent(modalOverlayRoot.transform, false);
@@ -212,6 +213,10 @@ namespace DomiNox.UI
             rightUtilityPanel.SetActive(isPlaying);
             shopView.gameObject.SetActive(isShop);
             modalOverlayRoot.SetActive(isReward || isLost);
+            if (isReward || isLost)
+            {
+                modalOverlayRoot.transform.SetAsLastSibling();
+            }
             levelRewardView.gameObject.SetActive(isReward);
             runLostView.gameObject.SetActive(isLost);
 

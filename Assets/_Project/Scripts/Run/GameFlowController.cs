@@ -264,9 +264,10 @@ namespace DomiNox.Run
                 return;
             }
 
-            Run.Credits += Run.CurrentReward.TotalCredits;
+            var totalCredits = Run.CurrentReward.TotalCredits;
+            Run.Credits += totalCredits;
             OpenShop();
-            Notify($"Cash out: +{Run.CurrentReward.TotalCredits} credits. Shop ouvert.");
+            Notify($"Cash out: +{totalCredits} credits. Shop ouvert.");
         }
 
         public void BuyShopOffer(int index)
