@@ -23,8 +23,8 @@ namespace DomiNox.UI
             background.color = new Color(0.05f, 0.07f, 0.09f, 0.98f);
 
             var layout = gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(18, 18, 18, 18);
-            layout.spacing = 18f;
+            layout.padding = new RectOffset(14, 14, 14, 14);
+            layout.spacing = 14f;
             layout.childAlignment = TextAnchor.UpperCenter;
 
             var leftColumn = new GameObject("ShopLeft", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
@@ -33,7 +33,7 @@ namespace DomiNox.UI
             var leftLayout = leftColumn.GetComponent<VerticalLayoutGroup>();
             leftLayout.spacing = 14f;
 
-            title = UiFactory.CreateText(leftColumn.transform, "Title", "SHOP - DOMINEX", 34, TextAnchor.MiddleCenter);
+            title = UiFactory.CreateText(leftColumn.transform, "Title", "SHOP - DOMINEX", 28, TextAnchor.MiddleCenter);
             title.color = new Color(0.98f, 0.86f, 0.38f);
 
             offersRoot = new GameObject("DomiNexOffers", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement), typeof(Image), typeof(Outline)).transform;
@@ -53,7 +53,7 @@ namespace DomiNox.UI
             futureSlotsRoot.GetComponent<Image>().color = new Color(0.06f, 0.09f, 0.1f, 0.95f);
             futureSlotsRoot.GetComponent<Outline>().effectColor = new Color(0.22f, 0.28f, 0.3f);
             futureSlotsRoot.GetComponent<Outline>().effectDistance = new Vector2(3f, -3f);
-            futureSlotsRoot.GetComponent<LayoutElement>().preferredHeight = 190f;
+            futureSlotsRoot.GetComponent<LayoutElement>().preferredHeight = 150f;
             var futureLayout = futureSlotsRoot.GetComponent<HorizontalLayoutGroup>();
             futureLayout.padding = new RectOffset(14, 14, 42, 14);
             futureLayout.spacing = 14f;
@@ -63,7 +63,7 @@ namespace DomiNox.UI
 
             var rightColumn = new GameObject("ShopRight", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
             rightColumn.transform.SetParent(transform, false);
-            rightColumn.GetComponent<LayoutElement>().preferredWidth = 310f;
+            rightColumn.GetComponent<LayoutElement>().preferredWidth = 280f;
             var rightLayout = rightColumn.GetComponent<VerticalLayoutGroup>();
             rightLayout.spacing = 14f;
 
@@ -73,7 +73,7 @@ namespace DomiNox.UI
             detailCard.Initialize("Survole un DomiNex");
 
             continueButton = UiFactory.CreateButton(rightColumn.transform, "ContinueButton", "Niveau suivant >>");
-            continueButton.GetComponent<LayoutElement>().preferredHeight = 64f;
+            continueButton.GetComponent<LayoutElement>().preferredHeight = 52f;
             continueButton.onClick.AddListener(controller.ContinueAfterShop);
         }
 
@@ -117,29 +117,29 @@ namespace DomiNox.UI
             root.GetComponent<DomiNexHoverTarget>().Initialize(offer.DomiNex, definition => detailCard.Render(definition), () => { });
 
             var layout = root.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(12, 12, 12, 12);
-            layout.spacing = 9f;
+            layout.padding = new RectOffset(10, 10, 10, 10);
+            layout.spacing = 7f;
             layout.childAlignment = TextAnchor.UpperCenter;
 
             var rarityBadge = new GameObject("RarityBadge", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             rarityBadge.transform.SetParent(root.transform, false);
             rarityBadge.GetComponent<Image>().color = DomiNexUiStyles.GetRarityColor(offer.DomiNex.Rarity);
-            rarityBadge.GetComponent<LayoutElement>().preferredHeight = 32f;
+            rarityBadge.GetComponent<LayoutElement>().preferredHeight = 26f;
 
-            var rarity = UiFactory.CreateText(rarityBadge.transform, "Rarity", offer.DomiNex.Rarity.ToString().ToUpperInvariant(), 16, TextAnchor.MiddleCenter);
+            var rarity = UiFactory.CreateText(rarityBadge.transform, "Rarity", offer.DomiNex.Rarity.ToString().ToUpperInvariant(), 13, TextAnchor.MiddleCenter);
             rarity.color = Color.black;
             Stretch(rarity.rectTransform);
 
-            var header = UiFactory.CreateText(root.transform, "Header", offer.DomiNex.Name, 22, TextAnchor.MiddleCenter);
+            var header = UiFactory.CreateText(root.transform, "Header", offer.DomiNex.Name, 18, TextAnchor.MiddleCenter);
             header.color = offer.IsPurchased ? Color.gray : Color.white;
 
             var shortDescription = offer.DomiNex.Description.Length > 72 ? offer.DomiNex.Description.Substring(0, 69) + "..." : offer.DomiNex.Description;
-            var description = UiFactory.CreateText(root.transform, "ShortDescription", shortDescription, 15, TextAnchor.UpperCenter);
+            var description = UiFactory.CreateText(root.transform, "ShortDescription", shortDescription, 12, TextAnchor.UpperCenter);
             description.color = new Color(0.82f, 0.86f, 0.92f);
             description.GetComponent<LayoutElement>().flexibleHeight = 1f;
 
             var button = UiFactory.CreateButton(root.transform, "BuyButton", offer.IsPurchased ? "Acheté" : $"Acheter ${offer.Price}");
-            button.GetComponent<LayoutElement>().preferredHeight = 54f;
+            button.GetComponent<LayoutElement>().preferredHeight = 44f;
             button.interactable = !offer.IsPurchased && credits >= offer.Price;
             var capturedIndex = index;
             button.onClick.AddListener(() => controller.BuyShopOffer(capturedIndex));
@@ -156,7 +156,7 @@ namespace DomiNox.UI
                 slot.GetComponent<Outline>().effectDistance = new Vector2(3f, -3f);
                 slot.GetComponent<LayoutElement>().flexibleWidth = 1f;
 
-                var label = UiFactory.CreateText(slot.transform, "Label", "FUTURE\nAUGMENT", 18, TextAnchor.MiddleCenter);
+                var label = UiFactory.CreateText(slot.transform, "Label", "FUTURE\nAUGMENT", 14, TextAnchor.MiddleCenter);
                 label.color = new Color(0.28f, 0.34f, 0.36f);
                 Stretch(label.rectTransform);
             }

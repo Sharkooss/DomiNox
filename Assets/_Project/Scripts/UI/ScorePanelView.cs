@@ -18,25 +18,25 @@ namespace DomiNox.UI
         public void Initialize()
         {
             var layout = gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 8f;
+            layout.spacing = 6f;
             layout.childAlignment = TextAnchor.UpperLeft;
-            stats = UiFactory.CreateText(transform, "Stats", string.Empty, 20, TextAnchor.UpperLeft);
+            stats = UiFactory.CreateText(transform, "Stats", string.Empty, 16, TextAnchor.UpperLeft);
 
-            var dominexTitle = UiFactory.CreateText(transform, "DomiNexTitle", "DomiNex actifs:", 16, TextAnchor.UpperLeft);
+            var dominexTitle = UiFactory.CreateText(transform, "DomiNexTitle", "DomiNex actifs:", 14, TextAnchor.UpperLeft);
             dominexTitle.color = new Color(0.98f, 0.86f, 0.38f);
 
             dominexRoot = new GameObject("DomiNexList", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement)).transform;
             dominexRoot.SetParent(transform, false);
             dominexRoot.GetComponent<VerticalLayoutGroup>().spacing = 4f;
-            dominexRoot.GetComponent<LayoutElement>().preferredHeight = 120f;
+            dominexRoot.GetComponent<LayoutElement>().preferredHeight = 96f;
 
             hoverCard = new GameObject("DomiNexHoverCard", typeof(RectTransform), typeof(LayoutElement)).AddComponent<DomiNexDetailCardView>();
             hoverCard.transform.SetParent(transform, false);
-            hoverCard.GetComponent<LayoutElement>().preferredHeight = 210f;
+            hoverCard.GetComponent<LayoutElement>().preferredHeight = 170f;
             hoverCard.Initialize("Survole un DomiNex actif");
             hoverCard.gameObject.SetActive(false);
 
-            breakdown = UiFactory.CreateText(transform, "Breakdown", string.Empty, 16, TextAnchor.UpperLeft);
+            breakdown = UiFactory.CreateText(transform, "Breakdown", string.Empty, 14, TextAnchor.UpperLeft);
         }
 
         public void Render(RunState run, ScoreResult score)
@@ -73,10 +73,10 @@ namespace DomiNox.UI
             var row = new GameObject($"DomiNex_{definition.Id}", typeof(RectTransform), typeof(Image), typeof(LayoutElement), typeof(DomiNexHoverTarget));
             row.transform.SetParent(dominexRoot, false);
             row.GetComponent<Image>().color = new Color(0.1f, 0.12f, 0.16f, 0.95f);
-            row.GetComponent<LayoutElement>().preferredHeight = 24f;
+            row.GetComponent<LayoutElement>().preferredHeight = 22f;
             row.GetComponent<DomiNexHoverTarget>().Initialize(definition, ShowHoverCard, HideHoverCard);
 
-            var text = UiFactory.CreateText(row.transform, "Label", $"[{definition.Rarity}] {definition.Name}", 14, TextAnchor.MiddleLeft);
+            var text = UiFactory.CreateText(row.transform, "Label", $"[{definition.Rarity}] {definition.Name}", 12, TextAnchor.MiddleLeft);
             text.color = DomiNexUiStyles.GetRarityColor(definition.Rarity);
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;

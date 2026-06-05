@@ -67,24 +67,24 @@ namespace DomiNox.UI
             EnsureEventSystem();
             var canvas = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.GetComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            UiFactory.ConfigureCanvasScaler(canvas.GetComponent<CanvasScaler>());
 
             var root = new GameObject("GameRoot", typeof(RectTransform), typeof(VerticalLayoutGroup));
             root.transform.SetParent(canvas.transform, false);
             Stretch(root.GetComponent<RectTransform>());
             var rootLayout = root.GetComponent<VerticalLayoutGroup>();
-            rootLayout.padding = new RectOffset(20, 20, 20, 20);
-            rootLayout.spacing = 12f;
+            rootLayout.padding = new RectOffset(16, 16, 16, 16);
+            rootLayout.spacing = 10f;
 
             var top = new GameObject("Top", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             top.transform.SetParent(root.transform, false);
             top.GetComponent<LayoutElement>().flexibleHeight = 1f;
             var topLayout = top.GetComponent<HorizontalLayoutGroup>();
-            topLayout.spacing = 16f;
+            topLayout.spacing = 12f;
 
             scorePanel = new GameObject("ScorePanel", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ScorePanelView>();
             scorePanel.transform.SetParent(top.transform, false);
-            scorePanel.GetComponent<LayoutElement>().preferredWidth = 280f;
+            scorePanel.GetComponent<LayoutElement>().preferredWidth = 250f;
             scorePanel.Initialize();
 
             gridView = new GameObject("Grid", typeof(RectTransform), typeof(LayoutElement)).AddComponent<GridView>();
@@ -94,22 +94,22 @@ namespace DomiNox.UI
 
             actionButtons = new GameObject("Actions", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ActionButtonsView>();
             actionButtons.transform.SetParent(top.transform, false);
-            actionButtons.GetComponent<LayoutElement>().preferredWidth = 240f;
+            actionButtons.GetComponent<LayoutElement>().preferredWidth = 210f;
             actionButtons.Initialize(controller);
 
             shopView = new GameObject("Shop", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ShopView>();
             shopView.transform.SetParent(top.transform, false);
             shopLayout = shopView.GetComponent<LayoutElement>();
-            shopLayout.preferredWidth = 760f;
+            shopLayout.preferredWidth = 1040f;
             shopLayout.flexibleWidth = 1f;
             shopView.Initialize(controller);
 
-            feedback = UiFactory.CreateText(root.transform, "Feedback", string.Empty, 22, TextAnchor.MiddleCenter);
+            feedback = UiFactory.CreateText(root.transform, "Feedback", string.Empty, 18, TextAnchor.MiddleCenter);
             feedback.color = new Color(0.95f, 0.85f, 0.42f);
 
             handView = new GameObject("Hand", typeof(RectTransform), typeof(LayoutElement)).AddComponent<HandView>();
             handView.transform.SetParent(root.transform, false);
-            handView.GetComponent<LayoutElement>().preferredHeight = 76f;
+            handView.GetComponent<LayoutElement>().preferredHeight = 70f;
             handView.Initialize(controller, SetActiveDragView, UpdateDragPreview, DropDraggedDomino);
         }
 

@@ -16,7 +16,7 @@ namespace DomiNox.UI
             var canvas = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             var canvasComponent = canvas.GetComponent<Canvas>();
             canvasComponent.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.GetComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            UiFactory.ConfigureCanvasScaler(canvas.GetComponent<CanvasScaler>());
 
             var root = new GameObject("MainMenuRoot", typeof(RectTransform), typeof(VerticalLayoutGroup));
             root.transform.SetParent(canvas.transform, false);

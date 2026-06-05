@@ -5,6 +5,16 @@ namespace DomiNox.Utilities
 {
     public static class UiFactory
     {
+        private static readonly Vector2 ReferenceResolution = new Vector2(1600f, 900f);
+
+        public static void ConfigureCanvasScaler(CanvasScaler scaler)
+        {
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = ReferenceResolution;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = 0.5f;
+        }
+
         public static Text CreateText(Transform parent, string name, string value, int fontSize = 22, TextAnchor alignment = TextAnchor.MiddleLeft)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Text), typeof(LayoutElement));

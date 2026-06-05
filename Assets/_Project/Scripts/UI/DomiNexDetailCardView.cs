@@ -23,21 +23,21 @@ namespace DomiNox.UI
             outline.effectColor = new Color(0.35f, 0.38f, 0.44f);
 
             var layout = gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(16, 16, 16, 16);
-            layout.spacing = 12f;
+            layout.padding = new RectOffset(12, 12, 12, 12);
+            layout.spacing = 8f;
             layout.childAlignment = TextAnchor.UpperCenter;
 
-            nameText = UiFactory.CreateText(transform, "Name", emptyText, 26, TextAnchor.MiddleCenter);
+            nameText = UiFactory.CreateText(transform, "Name", emptyText, 20, TextAnchor.MiddleCenter);
             rarityBackground = new GameObject("RarityBadge", typeof(RectTransform), typeof(Image), typeof(LayoutElement)).GetComponent<Image>();
             rarityBackground.transform.SetParent(transform, false);
-            rarityBackground.GetComponent<LayoutElement>().preferredHeight = 34f;
-            rarityText = UiFactory.CreateText(rarityBackground.transform, "Rarity", string.Empty, 18, TextAnchor.MiddleCenter);
+            rarityBackground.GetComponent<LayoutElement>().preferredHeight = 28f;
+            rarityText = UiFactory.CreateText(rarityBackground.transform, "Rarity", string.Empty, 14, TextAnchor.MiddleCenter);
             rarityText.color = Color.black;
             Stretch(rarityText.rectTransform);
 
-            descriptionText = UiFactory.CreateText(transform, "Description", string.Empty, 18, TextAnchor.UpperLeft);
+            descriptionText = UiFactory.CreateText(transform, "Description", string.Empty, 14, TextAnchor.UpperLeft);
             descriptionText.GetComponent<LayoutElement>().flexibleHeight = 1f;
-            tagsText = UiFactory.CreateText(transform, "Tags", string.Empty, 14, TextAnchor.LowerCenter);
+            tagsText = UiFactory.CreateText(transform, "Tags", string.Empty, 12, TextAnchor.LowerCenter);
             tagsText.color = new Color(0.65f, 0.72f, 0.8f);
 
             Render(null, emptyText);
