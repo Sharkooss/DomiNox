@@ -13,6 +13,7 @@ namespace DomiNox.UI
     {
         private GameFlowController controller;
         private ScorePanelView scorePanel;
+        private DomiNexBarView dominexBar;
         private GridView gridView;
         private HandView handView;
         private ActionButtonsView actionButtons;
@@ -76,6 +77,11 @@ namespace DomiNox.UI
             rootLayout.padding = new RectOffset(12, 12, 12, 12);
             rootLayout.spacing = 8f;
 
+            dominexBar = new GameObject("DomiNexBar", typeof(RectTransform), typeof(LayoutElement)).AddComponent<DomiNexBarView>();
+            dominexBar.transform.SetParent(root.transform, false);
+            dominexBar.GetComponent<LayoutElement>().preferredHeight = 76f;
+            dominexBar.Initialize();
+
             var top = new GameObject("Top", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             top.transform.SetParent(root.transform, false);
             top.GetComponent<LayoutElement>().flexibleHeight = 1f;
@@ -131,6 +137,7 @@ namespace DomiNox.UI
             }
 
             shopView.Render(run);
+            dominexBar.Render(run);
             feedback.text = message;
             if (!isShop && hasPointerPreview)
             {

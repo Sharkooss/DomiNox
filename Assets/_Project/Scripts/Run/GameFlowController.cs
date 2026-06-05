@@ -197,6 +197,13 @@ namespace DomiNox.Run
             return level.Grid.CanPlaceDomino(selectedDomino, new GridPosition(x, y), CurrentOrientation);
         }
 
+        public ScoreResult CalculateCurrentScorePreview()
+        {
+            var level = Run.CurrentLevel;
+            var dominexContext = CreateScoringContext(level);
+            return scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext);
+        }
+
         public void ResetPlacements()
         {
             var level = Run.CurrentLevel;
@@ -234,7 +241,7 @@ namespace DomiNox.Run
                 return;
             }
 
-            var dominexContext = new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.MaxPlacedDominoes);
+            var dominexContext = CreateScoringContext(level);
             lastScoreResult = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext);
             level.CurrentScore = lastScoreResult.FinalScore;
             level.IsWon = level.CurrentScore >= level.Quota;
@@ -323,9 +330,15 @@ namespace DomiNox.Run
             }
         }
 
+        private DomiNexScoringContext CreateScoringContext(LevelState level)
+        {
+            return new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.MaxPlacedDominoes);
+        }
+
         private void Notify(string message)
         {
-            StateChanged?.Invoke(Run, lastScoreResult, message);
+            var score = Run.Phase == RunPhase.PlayingLevel ? CalculateCurrentScorePreview() : lastScoreResult;
+            StateChanged?.Invoke(Run, score, message);
         }
     }
 }
