@@ -12,32 +12,68 @@ namespace DomiNox.UI
         private GameFlowController controller;
         private Text title;
         private Transform offersRoot;
+        private Transform futureSlotsRoot;
         private Button continueButton;
+        private DomiNexDetailCardView detailCard;
 
         public void Initialize(GameFlowController flowController)
         {
             controller = flowController;
             var background = gameObject.AddComponent<Image>();
-            background.color = new Color(0.06f, 0.07f, 0.1f, 0.96f);
+            background.color = new Color(0.05f, 0.07f, 0.09f, 0.98f);
 
-            var layout = gameObject.AddComponent<VerticalLayoutGroup>();
+            var layout = gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(18, 18, 18, 18);
-            layout.spacing = 14f;
+            layout.spacing = 18f;
             layout.childAlignment = TextAnchor.UpperCenter;
 
-            title = UiFactory.CreateText(transform, "Title", "Section DomiNex", 34, TextAnchor.MiddleCenter);
+            var leftColumn = new GameObject("ShopLeft", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            leftColumn.transform.SetParent(transform, false);
+            leftColumn.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            var leftLayout = leftColumn.GetComponent<VerticalLayoutGroup>();
+            leftLayout.spacing = 14f;
+
+            title = UiFactory.CreateText(leftColumn.transform, "Title", "SHOP - DOMINEX", 34, TextAnchor.MiddleCenter);
             title.color = new Color(0.98f, 0.86f, 0.38f);
 
-            offersRoot = new GameObject("Offers", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement)).transform;
-            offersRoot.SetParent(transform, false);
+            offersRoot = new GameObject("DomiNexOffers", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement), typeof(Image), typeof(Outline)).transform;
+            offersRoot.SetParent(leftColumn.transform, false);
+            offersRoot.GetComponent<Image>().color = new Color(0.08f, 0.11f, 0.14f, 0.95f);
+            offersRoot.GetComponent<Outline>().effectColor = new Color(0.45f, 0.34f, 0.16f);
+            offersRoot.GetComponent<Outline>().effectDistance = new Vector2(3f, -3f);
+            offersRoot.GetComponent<LayoutElement>().flexibleHeight = 1f;
             var offersLayout = offersRoot.GetComponent<HorizontalLayoutGroup>();
+            offersLayout.padding = new RectOffset(14, 14, 14, 14);
             offersLayout.spacing = 14f;
             offersLayout.childForceExpandWidth = true;
             offersLayout.childForceExpandHeight = true;
-            offersRoot.GetComponent<LayoutElement>().flexibleHeight = 1f;
 
-            continueButton = UiFactory.CreateButton(transform, "ContinueButton", "Passer au niveau suivant");
-            continueButton.GetComponent<LayoutElement>().preferredHeight = 54f;
+            futureSlotsRoot = new GameObject("FutureAugments", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement), typeof(Image), typeof(Outline)).transform;
+            futureSlotsRoot.SetParent(leftColumn.transform, false);
+            futureSlotsRoot.GetComponent<Image>().color = new Color(0.06f, 0.09f, 0.1f, 0.95f);
+            futureSlotsRoot.GetComponent<Outline>().effectColor = new Color(0.22f, 0.28f, 0.3f);
+            futureSlotsRoot.GetComponent<Outline>().effectDistance = new Vector2(3f, -3f);
+            futureSlotsRoot.GetComponent<LayoutElement>().preferredHeight = 190f;
+            var futureLayout = futureSlotsRoot.GetComponent<HorizontalLayoutGroup>();
+            futureLayout.padding = new RectOffset(14, 14, 42, 14);
+            futureLayout.spacing = 14f;
+            futureLayout.childForceExpandWidth = true;
+            futureLayout.childForceExpandHeight = true;
+            BuildFutureSlots();
+
+            var rightColumn = new GameObject("ShopRight", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            rightColumn.transform.SetParent(transform, false);
+            rightColumn.GetComponent<LayoutElement>().preferredWidth = 310f;
+            var rightLayout = rightColumn.GetComponent<VerticalLayoutGroup>();
+            rightLayout.spacing = 14f;
+
+            detailCard = new GameObject("DomiNexDetail", typeof(RectTransform), typeof(LayoutElement)).AddComponent<DomiNexDetailCardView>();
+            detailCard.transform.SetParent(rightColumn.transform, false);
+            detailCard.GetComponent<LayoutElement>().flexibleHeight = 1f;
+            detailCard.Initialize("Survole un DomiNex");
+
+            continueButton = UiFactory.CreateButton(rightColumn.transform, "ContinueButton", "Niveau suivant >>");
+            continueButton.GetComponent<LayoutElement>().preferredHeight = 64f;
             continueButton.onClick.AddListener(controller.ContinueAfterShop);
         }
 
@@ -49,7 +85,7 @@ namespace DomiNox.UI
                 return;
             }
 
-            title.text = $"Section DomiNex - Credits: {run.Credits}";
+            title.text = $"SHOP - DOMINEX   Credits: {run.Credits}";
             foreach (Transform child in offersRoot)
             {
                 Destroy(child.gameObject);
@@ -57,7 +93,8 @@ namespace DomiNox.UI
 
             if (run.CurrentShop == null || run.CurrentShop.Offers.Count == 0)
             {
-                UiFactory.CreateText(offersRoot, "Empty", "Aucune offre disponible.", 16, TextAnchor.MiddleCenter);
+                UiFactory.CreateText(offersRoot, "Empty", "Aucune offre disponible.", 18, TextAnchor.MiddleCenter);
+                detailCard.Render(null, "Aucune offre");
                 return;
             }
 
@@ -65,67 +102,72 @@ namespace DomiNox.UI
             {
                 CreateOffer(i, run.CurrentShop.Offers[i], run.Credits);
             }
+
+            detailCard.Render(run.CurrentShop.Offers[0].DomiNex);
         }
 
         private void CreateOffer(int index, ShopOffer offer, int credits)
         {
-            var root = new GameObject($"Offer_{index}", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(Image), typeof(Outline), typeof(LayoutElement));
+            var root = new GameObject($"Offer_{index}", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(Image), typeof(Outline), typeof(LayoutElement), typeof(DomiNexHoverTarget));
             root.transform.SetParent(offersRoot, false);
             root.GetComponent<Image>().color = new Color(0.12f, 0.14f, 0.18f, 0.98f);
-            root.GetComponent<Outline>().effectColor = GetRarityColor(offer.DomiNex.Rarity);
+            root.GetComponent<Outline>().effectColor = DomiNexUiStyles.GetRarityColor(offer.DomiNex.Rarity);
             root.GetComponent<Outline>().effectDistance = new Vector2(4f, -4f);
             root.GetComponent<LayoutElement>().flexibleWidth = 1f;
-            root.GetComponent<LayoutElement>().minHeight = 300f;
+            root.GetComponent<DomiNexHoverTarget>().Initialize(offer.DomiNex, definition => detailCard.Render(definition), () => { });
 
             var layout = root.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(14, 14, 14, 14);
-            layout.spacing = 10f;
-            layout.childAlignment = TextAnchor.UpperLeft;
+            layout.padding = new RectOffset(12, 12, 12, 12);
+            layout.spacing = 9f;
+            layout.childAlignment = TextAnchor.UpperCenter;
 
             var rarityBadge = new GameObject("RarityBadge", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             rarityBadge.transform.SetParent(root.transform, false);
-            rarityBadge.GetComponent<Image>().color = GetRarityColor(offer.DomiNex.Rarity);
-            rarityBadge.GetComponent<LayoutElement>().preferredHeight = 34f;
+            rarityBadge.GetComponent<Image>().color = DomiNexUiStyles.GetRarityColor(offer.DomiNex.Rarity);
+            rarityBadge.GetComponent<LayoutElement>().preferredHeight = 32f;
 
-            var rarity = UiFactory.CreateText(rarityBadge.transform, "Rarity", offer.DomiNex.Rarity.ToString().ToUpperInvariant(), 18, TextAnchor.MiddleCenter);
+            var rarity = UiFactory.CreateText(rarityBadge.transform, "Rarity", offer.DomiNex.Rarity.ToString().ToUpperInvariant(), 16, TextAnchor.MiddleCenter);
             rarity.color = Color.black;
-            rarity.rectTransform.anchorMin = Vector2.zero;
-            rarity.rectTransform.anchorMax = Vector2.one;
-            rarity.rectTransform.offsetMin = Vector2.zero;
-            rarity.rectTransform.offsetMax = Vector2.zero;
+            Stretch(rarity.rectTransform);
 
-            var header = UiFactory.CreateText(root.transform, "Header", offer.DomiNex.Name, 24, TextAnchor.MiddleCenter);
+            var header = UiFactory.CreateText(root.transform, "Header", offer.DomiNex.Name, 22, TextAnchor.MiddleCenter);
             header.color = offer.IsPurchased ? Color.gray : Color.white;
-            header.horizontalOverflow = HorizontalWrapMode.Wrap;
-            header.verticalOverflow = VerticalWrapMode.Overflow;
 
-            var price = UiFactory.CreateText(root.transform, "Price", $"Prix: {offer.Price} credits", 18, TextAnchor.MiddleCenter);
-            price.color = credits >= offer.Price ? new Color(0.8f, 1f, 0.72f) : new Color(1f, 0.52f, 0.52f);
-
-            var description = UiFactory.CreateText(root.transform, "Description", offer.DomiNex.Description, 17, TextAnchor.UpperLeft);
+            var shortDescription = offer.DomiNex.Description.Length > 72 ? offer.DomiNex.Description.Substring(0, 69) + "..." : offer.DomiNex.Description;
+            var description = UiFactory.CreateText(root.transform, "ShortDescription", shortDescription, 15, TextAnchor.UpperCenter);
             description.color = new Color(0.82f, 0.86f, 0.92f);
-            description.horizontalOverflow = HorizontalWrapMode.Wrap;
-            description.verticalOverflow = VerticalWrapMode.Overflow;
             description.GetComponent<LayoutElement>().flexibleHeight = 1f;
 
-            var button = UiFactory.CreateButton(root.transform, "BuyButton", offer.IsPurchased ? "Acheté" : "Acheter");
+            var button = UiFactory.CreateButton(root.transform, "BuyButton", offer.IsPurchased ? "Acheté" : $"Acheter ${offer.Price}");
             button.GetComponent<LayoutElement>().preferredHeight = 54f;
             button.interactable = !offer.IsPurchased && credits >= offer.Price;
             var capturedIndex = index;
             button.onClick.AddListener(() => controller.BuyShopOffer(capturedIndex));
         }
 
-        private static Color GetRarityColor(DomiNexRarity rarity)
+        private void BuildFutureSlots()
         {
-            return rarity switch
+            for (var i = 0; i < 4; i++)
             {
-                DomiNexRarity.Common => new Color(0.78f, 0.82f, 0.88f),
-                DomiNexRarity.Rare => new Color(0.25f, 0.55f, 1f),
-                DomiNexRarity.Epic => new Color(0.72f, 0.35f, 1f),
-                DomiNexRarity.Legendary => new Color(1f, 0.72f, 0.18f),
-                DomiNexRarity.Cursed => new Color(0.9f, 0.12f, 0.16f),
-                _ => Color.white
-            };
+                var slot = new GameObject($"FutureSlot_{i}", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(LayoutElement));
+                slot.transform.SetParent(futureSlotsRoot, false);
+                slot.GetComponent<Image>().color = new Color(0.08f, 0.11f, 0.12f, 0.86f);
+                slot.GetComponent<Outline>().effectColor = new Color(0.18f, 0.24f, 0.26f);
+                slot.GetComponent<Outline>().effectDistance = new Vector2(3f, -3f);
+                slot.GetComponent<LayoutElement>().flexibleWidth = 1f;
+
+                var label = UiFactory.CreateText(slot.transform, "Label", "FUTURE\nAUGMENT", 18, TextAnchor.MiddleCenter);
+                label.color = new Color(0.28f, 0.34f, 0.36f);
+                Stretch(label.rectTransform);
+            }
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
     }
 }
