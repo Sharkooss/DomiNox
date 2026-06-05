@@ -48,6 +48,7 @@ namespace DomiNox.UI
                 view.Initialize(domino, controller.SelectDomino, BeginDragDomino, dragged, dragEnded);
                 view.SetOrientation(domino == selected ? selectedOrientation : DominoOrientation.HorizontalRight);
                 view.SetSelected(domino == selected || selectedForDiscard.Contains(domino));
+                view.SetBossState(controller.IsBannedByBoss(domino), controller.IsLockedByBoss(domino));
                 views.Add(view);
             }
         }

@@ -27,7 +27,13 @@ namespace DomiNox.Patterns
 
         public List<PatternInfo> DetectPatternInfos(List<PlacedDomino> placedDominoes, int maxPlacedDominoes)
         {
+            return DetectPatternInfos(placedDominoes, maxPlacedDominoes, null);
+        }
+
+        public List<PatternInfo> DetectPatternInfos(List<PlacedDomino> placedDominoes, int maxPlacedDominoes, IReadOnlyCollection<string> disabledPatternIds)
+        {
             placedDominoes = placedDominoes ?? new List<PlacedDomino>();
+            var disabled = new HashSet<string>(disabledPatternIds ?? new string[0]);
 
             var patterns = new List<PatternInfo>();
             if (placedDominoes.Count == 0)
@@ -35,7 +41,7 @@ namespace DomiNox.Patterns
                 return patterns;
             }
 
-            patterns.Add(DetectBestValuePattern(placedDominoes));
+            patterns.Add(DetectBestValuePattern(placedDominoes, disabled));
 
             var design = DetectBestDesignPattern(placedDominoes);
             if (design != null)
@@ -48,10 +54,10 @@ namespace DomiNox.Patterns
                 patterns.Add(PatternCatalog.GetByName(PatternNames.NoxHand));
             }
 
-            return patterns.Where(pattern => pattern != null).ToList();
+            return patterns.Where(pattern => pattern != null && !disabled.Contains(ToPatternId(pattern.Name))).ToList();
         }
 
-        private static PatternInfo DetectBestValuePattern(IReadOnlyCollection<PlacedDomino> placedDominoes)
+        private static PatternInfo DetectBestValuePattern(IReadOnlyCollection<PlacedDomino> placedDominoes, HashSet<string> disabled)
         {
             if (placedDominoes.Count == 0)
             {
@@ -112,7 +118,7 @@ namespace DomiNox.Patterns
                 detected.Add(PatternCatalog.GetByName(PatternNames.LowRoll));
             }
 
-            return detected.Where(pattern => pattern != null).OrderByDescending(pattern => pattern.Priority).FirstOrDefault()
+            return detected.Where(pattern => pattern != null && !disabled.Contains(ToPatternId(pattern.Name))).OrderByDescending(pattern => pattern.Priority).FirstOrDefault()
                 ?? PatternCatalog.GetByName(PatternNames.HighTile);
         }
 
@@ -146,7 +152,7 @@ namespace DomiNox.Patterns
             }
 
             var detected = new List<PatternInfo>();
-            if (IsLoop(cells))
+            if (IsLoop(placedDominoes))
             {
                 detected.Add(PatternCatalog.GetByName(PatternNames.Loop));
             }
@@ -169,15 +175,62 @@ namespace DomiNox.Patterns
             return detected.Where(pattern => pattern != null).OrderByDescending(pattern => pattern.Priority).FirstOrDefault();
         }
 
-        private static bool IsLoop(IReadOnlyCollection<GridPosition> cells)
+        private static bool IsLoop(IReadOnlyCollection<PlacedDomino> placedDominoes)
         {
+            var cellValues = BuildCellValues(placedDominoes);
+            var cells = cellValues.Keys.ToList();
             if (cells.Count < 6)
             {
                 return false;
             }
 
             var cellSet = new HashSet<GridPosition>(cells);
-            return cells.All(cell => CountAdjacentCells(cell, cellSet) == 2);
+            return cells.All(cell => CountAdjacentCells(cell, cellSet) == 2) && AllExternalContactsMatch(placedDominoes, cellValues);
+        }
+
+        private static Dictionary<GridPosition, int> BuildCellValues(IEnumerable<PlacedDomino> placedDominoes)
+        {
+            var values = new Dictionary<GridPosition, int>();
+            foreach (var placed in placedDominoes)
+            {
+                var index = 0;
+                foreach (var cell in GridState.GetCells(placed.Position, placed.Orientation))
+                {
+                    values[cell] = GridState.GetCellValue(placed.Domino, placed.Orientation, index++);
+                }
+            }
+
+            return values;
+        }
+
+        private static bool AllExternalContactsMatch(IReadOnlyCollection<PlacedDomino> placedDominoes, Dictionary<GridPosition, int> cellValues)
+        {
+            var placedByCell = new Dictionary<GridPosition, PlacedDomino>();
+            foreach (var placed in placedDominoes)
+            {
+                foreach (var cell in GridState.GetCells(placed.Position, placed.Orientation))
+                {
+                    placedByCell[cell] = placed;
+                }
+            }
+
+            foreach (var pair in placedByCell)
+            {
+                foreach (var adjacent in GetAdjacentCells(pair.Key, new HashSet<GridPosition>(placedByCell.Keys)))
+                {
+                    if (placedByCell[adjacent] != pair.Value && cellValues[pair.Key] != cellValues[adjacent])
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static string ToPatternId(string name)
+        {
+            return name.ToLowerInvariant().Replace(' ', '_');
         }
 
         private static int CountPathDirectionChanges(IReadOnlyCollection<GridPosition> cells)

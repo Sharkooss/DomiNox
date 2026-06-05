@@ -18,8 +18,6 @@ namespace DomiNox.UI
             layout.childForceExpandHeight = false;
 
             UiFactory.CreateButton(transform, "DiscardButton", "Defausser").onClick.AddListener(controller.DiscardSelectedDominoes);
-            var draw = UiFactory.CreateButton(transform, "DrawButton", "Draw (-1 AP)");
-            draw.interactable = false;
             UiFactory.CreateButton(transform, "ResetButton", "Reset").onClick.AddListener(controller.ResetPlacements);
             var validate = UiFactory.CreateButton(transform, "ValidateButton", "Valider");
             validate.GetComponent<Image>().color = new Color(0.14f, 0.48f, 0.28f);

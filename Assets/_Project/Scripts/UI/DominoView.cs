@@ -58,6 +58,31 @@ namespace DomiNox.UI
             }
         }
 
+        public void SetBossState(bool banned, bool locked)
+        {
+            if (background == null || label == null)
+            {
+                return;
+            }
+
+            if (banned)
+            {
+                background.color = new Color(0.32f, 0.32f, 0.36f);
+                label.color = new Color(0.72f, 0.72f, 0.78f);
+                return;
+            }
+
+            if (locked)
+            {
+                background.color = new Color(0.72f, 0.84f, 1f);
+                label.color = Color.black;
+                label.text = $"{GetDisplayText()}\nLOCK";
+                return;
+            }
+
+            label.color = Color.black;
+        }
+
         public void SetOrientation(DominoOrientation dominoOrientation)
         {
             orientation = dominoOrientation;

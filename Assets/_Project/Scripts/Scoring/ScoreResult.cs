@@ -11,10 +11,15 @@ namespace DomiNox.Scoring
         public List<string> BreakdownLines { get; }
 
         public ScoreResult(int count, int mult, List<string> detectedPatterns, List<string> breakdownLines)
+            : this(count, mult, count * mult, detectedPatterns, breakdownLines)
+        {
+        }
+
+        public ScoreResult(int count, int mult, int finalScore, List<string> detectedPatterns, List<string> breakdownLines)
         {
             Count = count;
             Mult = mult;
-            FinalScore = count * mult;
+            FinalScore = finalScore;
             DetectedPatterns = detectedPatterns;
             BreakdownLines = breakdownLines;
         }

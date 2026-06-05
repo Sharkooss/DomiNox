@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DomiNox.Bosses;
 using DomiNox.Core;
 using DomiNox.Dominoes;
 using DomiNox.Dominex;
@@ -17,6 +18,7 @@ namespace DomiNox.Run
         private readonly PatternDetector patternDetector = new PatternDetector();
         private readonly DomiNexEffectEngine dominexEffectEngine = new DomiNexEffectEngine();
         private readonly DomiNexShopService shopService = new DomiNexShopService();
+        private readonly System.Random random = new System.Random();
         private ScoreCalculator scoreCalculator;
         private ScoreResult lastScoreResult;
         private DominoInstance selectedDomino;
@@ -55,6 +57,12 @@ namespace DomiNox.Run
 
             if (Run.CurrentLevel.Hand.Contains(domino))
             {
+                if (IsLockedByBoss(domino))
+                {
+                    Notify("Domino verrouille: impossible a defausser.");
+                    return;
+                }
+
                 if (!selectedForDiscard.Add(domino))
                 {
                     selectedForDiscard.Remove(domino);
@@ -73,6 +81,12 @@ namespace DomiNox.Run
 
             if (Run.CurrentLevel.Hand.Contains(domino))
             {
+                if (IsBannedByBoss(domino))
+                {
+                    Notify("Valeur bannie.");
+                    return;
+                }
+
                 selectedDomino = domino;
                 selectedForDiscard.Remove(domino);
             }
@@ -99,7 +113,14 @@ namespace DomiNox.Run
                 return;
             }
 
-            var discarded = selectedForDiscard.Where(level.Hand.Contains).ToList();
+            var discarded = selectedForDiscard.Where(level.Hand.Contains).Where(domino => !IsLockedByBoss(domino)).ToList();
+            if (discarded.Count == 0)
+            {
+                Notify("Les dominos selectionnes sont verrouilles.");
+                selectedForDiscard.Clear();
+                return;
+            }
+
             foreach (var domino in discarded)
             {
                 level.Hand.RemoveDomino(domino);
@@ -167,7 +188,13 @@ namespace DomiNox.Run
                 return;
             }
 
-            if (level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || level.ActionPoints <= 0)
+            if (IsBannedByBoss(selectedDomino))
+            {
+                Notify("Valeur bannie.");
+                return;
+            }
+
+            if (level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes)
             {
                 Notify("Limite de placement atteinte.");
                 return;
@@ -181,7 +208,6 @@ namespace DomiNox.Run
             }
 
             level.Hand.RemoveDomino(selectedDomino);
-            level.ActionPoints--;
             selectedDomino = null;
             Notify("Domino place.");
         }
@@ -189,7 +215,7 @@ namespace DomiNox.Run
         public bool CanPlaceSelected(int x, int y)
         {
             var level = Run.CurrentLevel;
-            if (Run.Phase != RunPhase.PlayingLevel || selectedDomino == null || level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || level.ActionPoints <= 0)
+            if (Run.Phase != RunPhase.PlayingLevel || selectedDomino == null || level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || IsBannedByBoss(selectedDomino))
             {
                 return false;
             }
@@ -201,7 +227,7 @@ namespace DomiNox.Run
         {
             var level = Run.CurrentLevel;
             var dominexContext = CreateScoringContext(level);
-            return scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext);
+            return scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext, level.Boss);
         }
 
         public void ResetPlacements()
@@ -223,7 +249,6 @@ namespace DomiNox.Run
 
             selectedDomino = null;
             selectedForDiscard.Clear();
-            level.ActionPoints = GameConstants.PhaseOneActionPoints;
             level.DiscardsUsed = 0;
             level.CurrentScore = 0;
             level.IsWon = false;
@@ -242,7 +267,7 @@ namespace DomiNox.Run
             }
 
             var dominexContext = CreateScoringContext(level);
-            lastScoreResult = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext);
+            lastScoreResult = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext, level.Boss);
             level.CurrentScore = lastScoreResult.FinalScore;
             level.IsWon = level.CurrentScore >= level.Quota;
             level.IsLost = !level.IsWon;
@@ -331,11 +356,19 @@ namespace DomiNox.Run
 
         private void StartLevel(int levelIndex)
         {
+            var bossDefinition = BossRegistry.GetForLevel(levelIndex);
+            var quota = GameConstants.PhaseOneQuota + ((levelIndex - 1) * GameConstants.LevelQuotaIncrease);
+            if (bossDefinition != null)
+            {
+                quota = (int)System.Math.Ceiling(quota * bossDefinition.QuotaMultiplier);
+            }
+
             Run.CurrentLevel = new LevelState
             {
                 FloorIndex = 1,
                 LevelIndex = levelIndex,
-                Quota = GameConstants.PhaseOneQuota + ((levelIndex - 1) * GameConstants.LevelQuotaIncrease)
+                Quota = quota,
+                Boss = bossDefinition == null ? null : new BossLevelState(bossDefinition)
             };
             Run.CurrentShop = null;
             Run.CurrentReward = null;
@@ -345,12 +378,62 @@ namespace DomiNox.Run
             CurrentOrientation = DominoOrientation.HorizontalRight;
 
             dominexEffectEngine.ApplyLevelStart(Run.DomiNexInventory, Run.CurrentLevel, null);
+            ApplyBossLevelStart(Run.CurrentLevel);
             Run.Bag.Initialize(DominoFactory.CreateDoubleSixSet());
 
             foreach (var domino in Run.Bag.Draw(GameConstants.StartingHandSize))
             {
                 Run.CurrentLevel.Hand.AddDomino(domino);
             }
+
+            ApplyBossAfterDraw(Run.CurrentLevel);
+        }
+
+        private void ApplyBossLevelStart(LevelState level)
+        {
+            var boss = level.Boss;
+            if (boss == null)
+            {
+                return;
+            }
+
+            if (boss.Definition.RuleType == BossRuleType.BannedValue && boss.Definition.BannedValueCount > 0)
+            {
+                boss.BannedValue = random.Next(GameConstants.DominoMinValue, GameConstants.DominoMaxValue + 1);
+            }
+
+            if (boss.Definition.RuleType == BossRuleType.ModifyDiscards)
+            {
+                level.DiscardsRemaining = System.Math.Max(0, level.DiscardsRemaining + boss.Definition.DiscardsDelta);
+            }
+        }
+
+        private void ApplyBossAfterDraw(LevelState level)
+        {
+            var boss = level.Boss;
+            if (boss == null || boss.Definition.RuleType != BossRuleType.LockHandDominoes)
+            {
+                return;
+            }
+
+            var handDominoes = level.Hand.Dominoes.OrderBy(_ => random.Next()).Take(boss.Definition.LockedDominoCount);
+            foreach (var domino in handDominoes)
+            {
+                boss.LockedDominoIds.Add(domino.InstanceId);
+            }
+        }
+
+        public bool IsBannedByBoss(DominoInstance domino)
+        {
+            var boss = Run.CurrentLevel.Boss;
+            return boss?.Definition.RuleType == BossRuleType.BannedValue
+                && boss.BannedValue.HasValue
+                && (domino.Definition.Left == boss.BannedValue.Value || domino.Definition.Right == boss.BannedValue.Value);
+        }
+
+        public bool IsLockedByBoss(DominoInstance domino)
+        {
+            return Run.CurrentLevel.Boss?.LockedDominoIds.Contains(domino.InstanceId) == true;
         }
 
         private DomiNexScoringContext CreateScoringContext(LevelState level)

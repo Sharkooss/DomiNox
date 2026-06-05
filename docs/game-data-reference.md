@@ -14,13 +14,16 @@ Ce fichier recense les valeurs éditables actuelles du prototype. À mettre à j
 | Starting quota | 80 | `GameConstants.PhaseOneQuota` |
 | Quota increase per level | 40 | `GameConstants.LevelQuotaIncrease` |
 | Starting credits | 10 | `GameConstants.StartingCredits` |
-| Action points | 4 | `GameConstants.PhaseOneActionPoints` |
 | Max placed dominoes | 5 | `GameConstants.PhaseOneMaxPlacedDominoes` |
 | Discards | 3 | `GameConstants.PhaseOneDiscards` |
 | Win credits | 5 | `GameConstants.LevelWinCredits` |
 | Credits per remaining discard | 1 | `GameConstants.CreditsPerRemainingDiscard` |
 | Interest step | 5 credits | `GameConstants.InterestCreditStep` |
 | Max interest credits | 5 | `GameConstants.MaxInterestCredits` |
+
+## Core Round Rules
+
+Chaque niveau commence avec une main de 7 dominos, une limite de 5 dominos posables et 3 discards disponibles. Il n'y a plus d'action points et il n'y a pas de bouton Draw. Le joueur peut defausser pour remplacer des dominos, poser jusqu'a la limite, puis valider une seule fois pour gagner ou perdre le niveau.
 
 ## Scoring Formula
 
@@ -60,12 +63,34 @@ Current flow:
 | Line | Design | Toutes les cases jouées forment une ligne horizontale ou verticale. | 20 | 0 | 20 |
 | Nox Hand | Bonus | Utiliser exactement la limite de pose du niveau. | 50 | 3 | 10 |
 
+## Bosses Demo
+
+Les boss apparaissent tous les 5 niveaux. Le boss actif est choisi dans `BossRegistry.DemoBosses` avec rotation sur le pool.
+
+| Boss | Rule Type | Effet | Quota |
+| --- | --- | --- | ---: |
+| Le Croupier Manchot | BannedValue | Une valeur entre 0 et 6 est bannie. Les dominos contenant cette valeur ne peuvent pas être posés. | x1.25 |
+| La Table Rouge | ModifyDiscards | Le niveau commence avec 1 discard en moins. | x1.20 |
+| La Veuve des Doubles | DisablePatterns | Les patterns `Double`, `Double Pair` et `Triple double` ne donnent aucun bonus. | x1.15 |
+| La Machine 777 | JackpotBoost | Chaque domino de somme 7 donne +7 Count et +1 Mult. `Jackpot 7` donne x1.25 score final. | x1.50 |
+| Le Sabot Verrouillé | LockHandDominoes | 2 dominos de la main de départ sont verrouillés et ne peuvent pas être défaussés. | x1.20 |
+
+## Boss Rules Notes
+
+| Rule | Notes |
+| --- | --- |
+| BannedValue | La valeur bannie est tirée au début du niveau boss. Les dominos concernés sont grisés et affichent `Valeur bannie` si le joueur essaie de les jouer. |
+| ModifyDiscards | Modifie `DiscardsRemaining` au début du niveau. Le cash out utilise les discards réellement restants. |
+| DisablePatterns | Le scoring retire les patterns désactivés avant de choisir le meilleur pattern de valeur. |
+| JackpotBoost | Appliqué pendant le scoring boss après les patterns et avant les DomiNex. |
+| LockHandDominoes | Les dominos verrouillés sont choisis après la main de départ. Ils peuvent être posés mais pas défaussés. |
+
 ## DomiNex
 
 | Id | Name | Rarity | Tags | Current Effect |
 | --- | --- | --- | --- | --- |
 | main_stable | Main Stable | Common | discard, comfort | Première défausse de chaque niveau gratuite. |
-| petit_profit | Petit Profit | Common | credits, actions | Futur: +1 crédit si niveau fini avec au moins 2 actions restantes. |
+| petit_profit | Petit Profit | Common | credits, discard | Futur: +1 crédit si niveau fini avec au moins 1 discard restant. |
 | double_simple | Double Simple | Common | double, mult | +1 Mult par double joué. |
 | compteur_bleu | Compteur Bleu | Common | count, placed | Si au moins 4 dominos posés, +15 Count. |
 | jeton_de_table | Jeton de Table | Common | credits | Futur: +1 crédit après chaque niveau réussi. |
@@ -78,13 +103,13 @@ Current flow:
 | suite_facile | Suite Facile | Common | pattern, mult | Futur: suites courtes donnent +2 Mult supplémentaire. |
 | economie_mineure | Economie Mineure | Common | economy | Futur: intérêts commencent à 8 crédits au lieu de 10. |
 | domino_poli | Domino Poli | Common | gold, count | Futur: dominos dorés donnent +1 Count supplémentaire. |
-| reroll_leger | Reroll Leger | Common | draw, actions | Futur: premier Draw de chaque niveau coûte 0 action. |
+| reroll_leger | Reroll Leger | Common | discard, comfort | Futur: première défausse de chaque niveau ne consomme pas de discard. |
 | poche_secrete | Poche Secrete | Common | hand | Futur: +1 taille de main au premier niveau de chaque étage. |
 | chaine_courte | Chaine Courte | Common | mult, placed | Si exactement 3 dominos joués, +4 Mult. |
 | coup_sur | Coup Sur | Common | credits, precision | Futur: dépassement quota < 20% donne +1 crédit. |
 | double_ou_rien | Double ou Rien | Rare | double, risk | +2 Mult par double. Futur: malus quota si aucun double. |
 | banque_noire | Banque Noire | Rare | credits, mult | +1 Mult par tranche de 10 crédits possédés. |
-| tapis_bleu | Tapis Bleu | Rare | blue, actions | Futur: premier domino bleu rend 1 action. |
+| tapis_bleu | Tapis Bleu | Rare | blue, discard | Futur: premier domino bleu joué rend 1 discard, une fois par niveau. |
 | full_nox_rare | Full Nox | Rare | full, mult | Si limite maximale de dominos utilisée, +10 Mult. |
 | jackpot_7_rare | Jackpot 7 | Rare | seven, mult, credits | Dominos de somme 7 donnent +2 Mult. Futur: 3 joués donne +4 crédits. |
 | limite_souple | Limite Souple | Rare | limit, count | +1 domino jouable, -1 Count par domino joué. |
@@ -95,10 +120,10 @@ Current flow:
 | mise_verte | Mise Verte | Rare | green, credits | Futur: dominos verts donnent +1 crédit si niveau gagné. |
 | relance_vip | Relance VIP | Rare | draw, comfort | Futur: relance toute la main pour 0 action une fois par niveau. |
 | valeur_fetiche | Valeur Fetiche | Rare | value, mult | Futur: valeur choisie au niveau donne +2 Mult. |
-| combo_tardif | Combo Tardif | Rare | actions, mult | Futur: tous dominos après au moins 2 actions donne +8 Mult. |
+| combo_tardif | Combo Tardif | Rare | discard, mult | Futur: validation après au moins 1 discard donne +8 Mult. |
 | architecte_du_casino | Architecte du Casino | Epic | pattern, mult | Futur: suites longues et équilibre donnent deux fois plus de Mult. |
 | sac_dore | Sac Dore | Epic | gold, credits | Futur: dominos dorés donnent +2 crédits au lieu de +1. |
-| limite_brisee | Limite Brisee | Epic | limit, actions | +1 domino jouable. Futur: -1 action de départ. |
+| limite_brisee | Limite Brisee | Epic | limit, discard | +1 domino jouable. Futur: -1 discard. |
 | haute_mise_epic | Haute Mise | Epic | high, count, mult | Dominos de somme >= 10 donnent +5 Count et +1 Mult. |
 | petite_fortune | Petite Fortune | Epic | low, mult | Dominos de somme <= 4 donnent +3 Mult. |
 | jackpot_instable | Jackpot Instable | Epic | seven, risk | Futur: jackpot donne x1.5 score final, prochain shop +20%. |

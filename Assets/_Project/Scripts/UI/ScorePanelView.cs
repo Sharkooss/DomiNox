@@ -16,10 +16,10 @@ namespace DomiNox.UI
         private Text roundScore;
         private Text countValue;
         private Text multValue;
-        private Text actionsValue;
         private Text discardsValue;
         private Text creditsValue;
         private Text placedValue;
+        private Text bossValue;
         private Text breakdown;
         private GameObject patternOverlay;
         private Button valuePatternsTab;
@@ -58,11 +58,11 @@ namespace DomiNox.UI
             multiply.GetComponent<LayoutElement>().preferredWidth = 16f;
             multValue = CreateFormulaPill(formula.transform, "Mult", new Color(1f, 0.25f, 0.22f));
 
-            var resources = CreateSection("ResourceSection", 116f, new Color(0.08f, 0.1f, 0.13f));
-            actionsValue = CreateMetric(resources, "Actions", "AP");
+            var resources = CreateSection("ResourceSection", 144f, new Color(0.08f, 0.1f, 0.13f));
             discardsValue = CreateMetric(resources, "Discards", "Discards");
             creditsValue = CreateMetric(resources, "Credits", "Credits");
             placedValue = CreateMetric(resources, "Placed", "Placed");
+            bossValue = CreateMetric(resources, "Boss", "Boss");
 
             var details = CreateSection("DetailsSection", 0f, new Color(0.07f, 0.09f, 0.12f));
             details.GetComponent<LayoutElement>().flexibleHeight = 1f;
@@ -94,10 +94,10 @@ namespace DomiNox.UI
             roundScore.text = $"Round score\n{score.FinalScore}";
             countValue.text = score.Count.ToString();
             multValue.text = score.Mult.ToString();
-            actionsValue.text = level.ActionPoints.ToString();
             discardsValue.text = level.DiscardsRemaining.ToString();
             creditsValue.text = $"${run.Credits}";
             placedValue.text = $"{placed}/{level.MaxPlacedDominoes}";
+            bossValue.text = level.Boss == null ? "-" : level.Boss.Definition.Name;
 
             var patterns = score.DetectedPatterns.Count == 0 ? "Aucun pattern" : string.Join(", ", score.DetectedPatterns);
             breakdown.text = $"{patterns}\n\n{string.Join("\n", score.BreakdownLines.Take(5))}";
