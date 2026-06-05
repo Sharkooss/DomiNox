@@ -73,28 +73,29 @@ namespace DomiNox.UI
             root.transform.SetParent(canvas.transform, false);
             Stretch(root.GetComponent<RectTransform>());
             var rootLayout = root.GetComponent<VerticalLayoutGroup>();
-            rootLayout.padding = new RectOffset(16, 16, 16, 16);
-            rootLayout.spacing = 10f;
+            rootLayout.padding = new RectOffset(12, 12, 12, 12);
+            rootLayout.spacing = 8f;
 
             var top = new GameObject("Top", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             top.transform.SetParent(root.transform, false);
             top.GetComponent<LayoutElement>().flexibleHeight = 1f;
             var topLayout = top.GetComponent<HorizontalLayoutGroup>();
-            topLayout.spacing = 12f;
+            topLayout.spacing = 10f;
+            topLayout.childAlignment = TextAnchor.MiddleCenter;
 
             scorePanel = new GameObject("ScorePanel", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ScorePanelView>();
             scorePanel.transform.SetParent(top.transform, false);
-            scorePanel.GetComponent<LayoutElement>().preferredWidth = 250f;
+            scorePanel.GetComponent<LayoutElement>().preferredWidth = 230f;
             scorePanel.Initialize();
 
             gridView = new GameObject("Grid", typeof(RectTransform), typeof(LayoutElement)).AddComponent<GridView>();
             gridView.transform.SetParent(top.transform, false);
-            gridView.GetComponent<LayoutElement>().preferredWidth = 420f;
+            gridView.GetComponent<LayoutElement>().preferredWidth = 372f;
             gridView.Initialize(controller);
 
             actionButtons = new GameObject("Actions", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ActionButtonsView>();
             actionButtons.transform.SetParent(top.transform, false);
-            actionButtons.GetComponent<LayoutElement>().preferredWidth = 210f;
+            actionButtons.GetComponent<LayoutElement>().preferredWidth = 180f;
             actionButtons.Initialize(controller);
 
             shopView = new GameObject("Shop", typeof(RectTransform), typeof(LayoutElement)).AddComponent<ShopView>();
@@ -109,7 +110,7 @@ namespace DomiNox.UI
 
             handView = new GameObject("Hand", typeof(RectTransform), typeof(LayoutElement)).AddComponent<HandView>();
             handView.transform.SetParent(root.transform, false);
-            handView.GetComponent<LayoutElement>().preferredHeight = 70f;
+            handView.GetComponent<LayoutElement>().preferredHeight = 62f;
             handView.Initialize(controller, SetActiveDragView, UpdateDragPreview, DropDraggedDomino);
         }
 

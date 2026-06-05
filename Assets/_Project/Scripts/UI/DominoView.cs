@@ -10,6 +10,11 @@ namespace DomiNox.UI
 {
     public sealed class DominoView : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
+        public const float HorizontalWidth = 62f;
+        public const float HorizontalHeight = 40f;
+        public const float VerticalWidth = 40f;
+        public const float VerticalHeight = 62f;
+
         private Image background;
         private Text label;
         private DominoInstance domino;
@@ -36,7 +41,7 @@ namespace DomiNox.UI
             dragEnded = onDragEnded;
             background = gameObject.AddComponent<Image>();
             background.color = Color.white;
-            label = UiFactory.CreateText(transform, "Label", domino.ToString(), 20, TextAnchor.MiddleCenter);
+            label = UiFactory.CreateText(transform, "Label", domino.ToString(), 17, TextAnchor.MiddleCenter);
             label.color = Color.black;
             label.rectTransform.anchorMin = Vector2.zero;
             label.rectTransform.anchorMax = Vector2.one;
@@ -110,11 +115,11 @@ namespace DomiNox.UI
             dragGhost.transform.SetParent(canvas.transform, false);
             dragGhost.transform.position = position;
             dragGhostRect = dragGhost.GetComponent<RectTransform>();
-            dragGhostRect.sizeDelta = new Vector2(86f, 54f);
+            dragGhostRect.sizeDelta = new Vector2(HorizontalWidth, HorizontalHeight);
             dragGhost.GetComponent<CanvasGroup>().blocksRaycasts = false;
             dragGhost.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.82f);
 
-            dragGhostLabel = UiFactory.CreateText(dragGhost.transform, "Label", GetDisplayText(), 22, TextAnchor.MiddleCenter);
+            dragGhostLabel = UiFactory.CreateText(dragGhost.transform, "Label", GetDisplayText(), 18, TextAnchor.MiddleCenter);
             dragGhostLabel.color = Color.black;
             dragGhostLabel.rectTransform.anchorMin = Vector2.zero;
             dragGhostLabel.rectTransform.anchorMax = Vector2.one;
@@ -189,12 +194,12 @@ namespace DomiNox.UI
         {
             if (GridState.IsHorizontal(orientation))
             {
-                rect.sizeDelta = new Vector2(76f, 48f);
+                rect.sizeDelta = new Vector2(HorizontalWidth, HorizontalHeight);
                 textRect.localRotation = Quaternion.identity;
                 return;
             }
 
-            rect.sizeDelta = new Vector2(48f, 76f);
+            rect.sizeDelta = new Vector2(VerticalWidth, VerticalHeight);
             textRect.localRotation = Quaternion.identity;
         }
     }

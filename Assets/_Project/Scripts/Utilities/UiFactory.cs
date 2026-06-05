@@ -36,10 +36,10 @@ namespace DomiNox.Utilities
             go.transform.SetParent(parent, false);
             go.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
             var layout = go.GetComponent<LayoutElement>();
-            layout.preferredWidth = 220f;
-            layout.preferredHeight = 48f;
+            layout.preferredWidth = 176f;
+            layout.preferredHeight = 42f;
             var button = go.GetComponent<Button>();
-            var text = CreateText(go.transform, "Label", label, 20, TextAnchor.MiddleCenter);
+            var text = CreateText(go.transform, "Label", label, 18, TextAnchor.MiddleCenter);
             text.rectTransform.anchorMin = Vector2.zero;
             text.rectTransform.anchorMax = Vector2.one;
             text.rectTransform.offsetMin = Vector2.zero;

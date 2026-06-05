@@ -13,8 +13,9 @@ namespace DomiNox.UI
         public void Initialize(GameFlowController controller)
         {
             var layout = gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 10f;
+            layout.spacing = 8f;
             layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childForceExpandWidth = false;
 
             rotateButton = UiFactory.CreateButton(transform, "RotateButton", "E: tourner droite");
             rotateButton.onClick.AddListener(controller.ToggleOrientation);

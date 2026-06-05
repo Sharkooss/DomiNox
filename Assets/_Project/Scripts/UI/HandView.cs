@@ -24,7 +24,7 @@ namespace DomiNox.UI
             dragged = onDragged;
             dragEnded = onDragEnded;
             var layout = gameObject.AddComponent<HorizontalLayoutGroup>();
-            layout.spacing = 8f;
+            layout.spacing = 6f;
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childForceExpandWidth = false;
         }
@@ -42,8 +42,8 @@ namespace DomiNox.UI
                 var go = new GameObject($"Domino_{domino.InstanceId}", typeof(RectTransform), typeof(LayoutElement));
                 go.transform.SetParent(transform, false);
                 var layout = go.GetComponent<LayoutElement>();
-                layout.preferredWidth = domino == selected && !GridState.IsHorizontal(selectedOrientation) ? 48f : 76f;
-                layout.preferredHeight = domino == selected && !GridState.IsHorizontal(selectedOrientation) ? 76f : 48f;
+                layout.preferredWidth = domino == selected && !GridState.IsHorizontal(selectedOrientation) ? DominoView.VerticalWidth : DominoView.HorizontalWidth;
+                layout.preferredHeight = domino == selected && !GridState.IsHorizontal(selectedOrientation) ? DominoView.VerticalHeight : DominoView.HorizontalHeight;
                 var view = go.AddComponent<DominoView>();
                 view.Initialize(domino, controller.SelectDomino, BeginDragDomino, dragged, dragEnded);
                 view.SetOrientation(domino == selected ? selectedOrientation : DominoOrientation.HorizontalRight);
