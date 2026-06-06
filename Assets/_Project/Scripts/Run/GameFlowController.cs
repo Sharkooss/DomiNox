@@ -289,6 +289,7 @@ namespace DomiNox.Run
 
             var dominexContext = CreateScoringContext(level);
             lastScoreResult = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext, level.Boss);
+            Run.PatternUsage.Record(lastScoreResult.DetectedPatterns);
             level.CurrentScore = lastScoreResult.FinalScore;
             level.IsWon = level.CurrentScore >= level.Quota;
             level.IsLost = !level.IsWon;
@@ -545,7 +546,7 @@ namespace DomiNox.Run
 
         private DomiNexScoringContext CreateScoringContext(LevelState level)
         {
-            return new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.DiscardsRemaining, level.MaxPlacedDominoes);
+            return new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.DiscardsRemaining, level.MaxPlacedDominoes, patternUsageCounts: Run.PatternUsage.Counts);
         }
 
         private void Notify(string message)

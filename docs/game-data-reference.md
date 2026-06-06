@@ -40,6 +40,8 @@ Current flow:
 4. Add the best design pattern bonus if detected.
 5. Apply active DomiNex scoring effects.
 
+Après une validation, chaque pattern détecté est enregistré dans `RunState.PatternUsage`. Les compteurs sont propres à la run et repartent à zéro au démarrage d'une nouvelle run. Exemple: une validation qui détecte `Double` et `Loop` ajoute +1 à chacun de ces deux compteurs.
+
 ## Value Patterns
 
 | Pattern | Requirement | Count Bonus | Mult Bonus | Priority |

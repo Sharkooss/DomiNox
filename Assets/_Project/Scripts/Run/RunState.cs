@@ -12,6 +12,7 @@ namespace DomiNox.Run
         public int MaxDomiNexSlots { get; set; } = GameConstants.StartingDomiNexSlots;
         public DominoBag Bag { get; } = new DominoBag();
         public DomiNexInventory DomiNexInventory { get; } = new DomiNexInventory();
+        public PatternUsageState PatternUsage { get; } = new PatternUsageState();
         public LevelState CurrentLevel { get; set; }
         public ShopState CurrentShop { get; set; }
         public LevelRewardState CurrentReward { get; set; }
