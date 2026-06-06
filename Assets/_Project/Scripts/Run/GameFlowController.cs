@@ -43,10 +43,10 @@ namespace DomiNox.Run
             Run = new RunState { CurrentLevel = new LevelState() };
             Run.DomiNexInventory.SetActive(Array.Empty<DomiNexDefinition>());
             dominexEffectEngine.ApplyRunStart(Run.DomiNexInventory, Run, null);
-            StartLevel(Run.CurrentLevel.LevelIndex);
 
-            lastScoreResult = new ScoreResult(0, 1, new System.Collections.Generic.List<string>(), new System.Collections.Generic.List<string> { "Place des dominos puis valide." });
-            Notify("Selectionne un domino.");
+            lastScoreResult = new ScoreResult(0, 1, new System.Collections.Generic.List<string>(), new System.Collections.Generic.List<string> { "Choisis la prochaine table." });
+            OpenFloorProgress(1);
+            Notify("Etage 1: choisis la premiere table.");
         }
 
         public void SelectDomino(DominoInstance domino)
@@ -355,7 +355,18 @@ namespace DomiNox.Run
                 return;
             }
 
-            StartLevel(Run.CurrentLevel.LevelIndex + 1);
+            OpenFloorProgress(Run.CurrentLevel.LevelIndex + 1);
+            Notify($"Etage {Run.CurrentLevel.FloorIndex}: prochaine table disponible.");
+        }
+
+        public void StartCurrentLevel()
+        {
+            if (Run.Phase != RunPhase.FloorProgress)
+            {
+                return;
+            }
+
+            StartLevel(Run.CurrentLevel.LevelIndex);
             Notify($"Niveau {Run.CurrentLevel.LevelIndex}. Quota {Run.CurrentLevel.Quota}.");
         }
 
@@ -387,26 +398,52 @@ namespace DomiNox.Run
             Run.Phase = RunPhase.LevelReward;
         }
 
-        private void StartLevel(int levelIndex)
+        private void OpenFloorProgress(int levelIndex)
         {
-            var bossDefinition = BossRegistry.GetForLevel(levelIndex, random, Run.PreviousBossId);
-            var quota = GameConstants.PhaseOneQuota + ((levelIndex - 1) * GameConstants.LevelQuotaIncrease);
-            if (bossDefinition != null)
+            var floorIndex = GetFloorIndex(levelIndex);
+            var levelInFloor = GetLevelInFloor(levelIndex);
+            if (Run.CurrentFloorBoss == null || Run.CurrentLevel == null || Run.CurrentLevel.FloorIndex != floorIndex)
             {
-                quota = (int)System.Math.Ceiling(quota * bossDefinition.QuotaMultiplier);
+                Run.CurrentFloorBoss = BossRegistry.GetRandom(random, Run.PreviousBossId);
+                Run.PreviousBossId = Run.CurrentFloorBoss?.Id;
             }
 
             Run.CurrentLevel = new LevelState
             {
-                FloorIndex = 1,
+                FloorIndex = floorIndex,
                 LevelIndex = levelIndex,
-                Quota = quota,
+                Quota = GetQuotaForLevel(levelIndex),
+                Boss = levelInFloor == GameConstants.LevelsPerFloor && Run.CurrentFloorBoss != null
+                    ? new BossLevelState(Run.CurrentFloorBoss)
+                    : null
+            };
+            Run.CurrentShop = null;
+            Run.CurrentReward = null;
+            Run.Phase = RunPhase.FloorProgress;
+            selectedDomino = null;
+            selectedForDiscard.Clear();
+            BossIntroActive = false;
+        }
+
+        private void StartLevel(int levelIndex)
+        {
+            var floorIndex = GetFloorIndex(levelIndex);
+            var levelInFloor = GetLevelInFloor(levelIndex);
+            if (Run.CurrentFloorBoss == null || Run.CurrentLevel == null || Run.CurrentLevel.FloorIndex != floorIndex)
+            {
+                Run.CurrentFloorBoss = BossRegistry.GetRandom(random, Run.PreviousBossId);
+                Run.PreviousBossId = Run.CurrentFloorBoss?.Id;
+            }
+
+            var bossDefinition = levelInFloor == GameConstants.LevelsPerFloor ? Run.CurrentFloorBoss : null;
+
+            Run.CurrentLevel = new LevelState
+            {
+                FloorIndex = floorIndex,
+                LevelIndex = levelIndex,
+                Quota = GetQuotaForLevel(levelIndex),
                 Boss = bossDefinition == null ? null : new BossLevelState(bossDefinition)
             };
-            if (bossDefinition != null)
-            {
-                Run.PreviousBossId = bossDefinition.Id;
-            }
             Run.CurrentShop = null;
             Run.CurrentReward = null;
             Run.Phase = RunPhase.PlayingLevel;
@@ -425,6 +462,25 @@ namespace DomiNox.Run
             }
 
             ApplyBossAfterDraw(Run.CurrentLevel);
+        }
+
+        public int GetQuotaForLevel(int levelIndex)
+        {
+            var baseQuota = GameConstants.PhaseOneQuota + ((levelIndex - 1) * GameConstants.LevelQuotaIncrease);
+            var levelInFloor = GetLevelInFloor(levelIndex);
+            return levelInFloor == GameConstants.LevelsPerFloor && Run?.CurrentFloorBoss != null
+                ? (int)System.Math.Ceiling(baseQuota * Run.CurrentFloorBoss.QuotaMultiplier)
+                : baseQuota;
+        }
+
+        public static int GetFloorIndex(int levelIndex)
+        {
+            return ((levelIndex - 1) / GameConstants.LevelsPerFloor) + 1;
+        }
+
+        public static int GetLevelInFloor(int levelIndex)
+        {
+            return ((levelIndex - 1) % GameConstants.LevelsPerFloor) + 1;
         }
 
         private void ApplyBossLevelStart(LevelState level)

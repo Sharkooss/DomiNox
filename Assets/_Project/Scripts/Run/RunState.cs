@@ -2,6 +2,7 @@ using DomiNox.Core;
 using DomiNox.Dominoes;
 using DomiNox.Dominex;
 using DomiNox.Shop;
+using DomiNox.Bosses;
 
 namespace DomiNox.Run
 {
@@ -13,7 +14,8 @@ namespace DomiNox.Run
         public LevelState CurrentLevel { get; set; }
         public ShopState CurrentShop { get; set; }
         public LevelRewardState CurrentReward { get; set; }
-        public RunPhase Phase { get; set; } = RunPhase.PlayingLevel;
+        public RunPhase Phase { get; set; } = RunPhase.FloorProgress;
+        public BossDefinition CurrentFloorBoss { get; set; }
         public string PreviousBossId { get; set; }
     }
 }

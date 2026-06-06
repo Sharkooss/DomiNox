@@ -60,13 +60,18 @@ namespace DomiNox.Bosses
                 return DemoBosses[((levelIndex / 5) - 1) % DemoBosses.Length];
             }
 
+            return GetRandom(random, previousBossId);
+        }
+
+        public static BossDefinition GetRandom(System.Random random, string previousBossId = null)
+        {
             var candidates = DemoBosses;
             if (!string.IsNullOrWhiteSpace(previousBossId) && DemoBosses.Length > 1)
             {
                 candidates = System.Array.FindAll(DemoBosses, boss => boss.Id != previousBossId);
             }
 
-            return candidates[random.Next(0, candidates.Length)];
+            return candidates[(random ?? new System.Random()).Next(0, candidates.Length)];
         }
     }
 }

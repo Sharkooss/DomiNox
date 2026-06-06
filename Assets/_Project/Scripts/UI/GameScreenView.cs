@@ -15,6 +15,7 @@ namespace DomiNox.UI
         private ScorePanelView scorePanel;
         private DomiNexBarView dominexBar;
         private GridView gridView;
+        private FloorProgressView floorProgressView;
         private HandView handView;
         private ActionButtonsView actionButtons;
         private BagPanelView bagPanel;
@@ -114,6 +115,13 @@ namespace DomiNox.UI
             dominexBar.GetComponent<LayoutElement>().preferredHeight = 66f;
             dominexBar.Initialize();
 
+            floorProgressView = new GameObject("FloorProgressView", typeof(RectTransform), typeof(LayoutElement)).AddComponent<FloorProgressView>();
+            floorProgressView.transform.SetParent(centerGameplayPanel.transform, false);
+            var floorProgressLayout = floorProgressView.GetComponent<LayoutElement>();
+            floorProgressLayout.preferredHeight = 540f;
+            floorProgressLayout.flexibleWidth = 1f;
+            floorProgressView.Initialize(controller);
+
             gridPanel = CreatePanel("GridPanel", centerGameplayPanel.transform, new Color(0.06f, 0.08f, 0.11f, 0.72f));
             var gridPanelLayout = gridPanel.GetComponent<LayoutElement>();
             gridPanelLayout.preferredHeight = 466f;
@@ -210,9 +218,11 @@ namespace DomiNox.UI
         private void Render(RunState run, ScoreResult score, string message)
         {
             var isShop = run.Phase == RunPhase.Shop;
+            var isFloorProgress = run.Phase == RunPhase.FloorProgress;
             var isPlaying = run.Phase == RunPhase.PlayingLevel;
             var isReward = run.Phase == RunPhase.LevelReward;
             var isLost = run.Phase == RunPhase.RunLost;
+            floorProgressView.gameObject.SetActive(isFloorProgress);
             gridPanel.SetActive(isPlaying);
             actionButtons.gameObject.SetActive(isPlaying);
             handPanel.SetActive(isPlaying);
@@ -229,6 +239,12 @@ namespace DomiNox.UI
             scorePanel.Render(run, score);
             bagPanel.Render(run);
             bossIntroView.Render(run);
+            if (isFloorProgress)
+            {
+                floorProgressView.Render(run);
+                utilityInfo.text = "Floor Progress\nLe boss est visible des maintenant.\n\nPrepare tes achats au shop avant la table boss.";
+            }
+
             if (isPlaying)
             {
                 gridView.Render(run.CurrentLevel.Grid);
@@ -256,7 +272,7 @@ namespace DomiNox.UI
 
             shopView.Render(run);
             dominexBar.Render(run);
-            feedback.gameObject.SetActive(isPlaying || isShop);
+            feedback.gameObject.SetActive(isPlaying || isShop || isFloorProgress);
             feedback.text = message;
             if (!isShop && hasPointerPreview)
             {

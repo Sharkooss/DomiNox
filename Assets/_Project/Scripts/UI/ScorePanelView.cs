@@ -92,7 +92,7 @@ namespace DomiNox.UI
             var level = run.CurrentLevel;
             var placed = level.Grid.GetPlacedDominoes().Count;
 
-            blindTitle.text = run.Phase == RunPhase.Shop ? "SHOP" : "BIG BLIND";
+            blindTitle.text = run.Phase == RunPhase.Shop ? "SHOP" : run.Phase == RunPhase.FloorProgress ? "FLOOR MAP" : "BIG BLIND";
             blindScore.text = $"Score at least\n{level.Quota}";
             levelInfo.text = $"Floor {level.FloorIndex}  |  Level {level.LevelIndex}";
             roundScore.text = $"Round score\n{score.FinalScore}";
@@ -101,9 +101,12 @@ namespace DomiNox.UI
             discardsValue.text = level.DiscardsRemaining.ToString();
             creditsValue.text = $"${run.Credits}";
             placedValue.text = $"{placed}/{level.MaxPlacedDominoes}";
-            bossValue.text = level.Boss == null ? "-" : level.Boss.Definition.Name;
-            bossValue.color = level.Boss == null ? Color.white : new Color(1f, 0.72f, 0.28f);
-            bossTooltipText.text = level.Boss == null ? "Aucun boss actif." : level.Boss.GetEffectSummary();
+            var displayedBoss = level.Boss?.Definition ?? run.CurrentFloorBoss;
+            bossValue.text = displayedBoss == null ? "-" : displayedBoss.Name;
+            bossValue.color = displayedBoss == null ? Color.white : new Color(1f, 0.72f, 0.28f);
+            bossTooltipText.text = level.Boss == null
+                ? displayedBoss == null ? "Aucun boss actif." : displayedBoss.Description
+                : level.Boss.GetEffectSummary();
 
             var patterns = score.DetectedPatterns.Count == 0 ? "Aucun pattern" : string.Join(", ", score.DetectedPatterns);
             breakdown.text = $"{patterns}\n\n{string.Join("\n", score.BreakdownLines.Take(5))}";
