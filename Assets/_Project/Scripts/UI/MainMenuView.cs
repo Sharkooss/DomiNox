@@ -191,8 +191,16 @@ namespace DomiNox.UI
                 var status = DomiNexRegistry.TemporarilyDisabledIds.Contains(dominex.Id)
                     ? "DESACTIVE TEMP"
                     : DomiNexRegistry.IsAvailableInPrototypeShop(dominex) ? "SHOP" : "FUTUR";
-                AddCard(dominex.Name, $"{dominex.Rarity}  |  {status}  |  {string.Join(", ", dominex.Tags)}\n{dominex.Description}");
+                AddDomiNexCard(dominex, status);
             }
+        }
+
+        private void AddDomiNexCard(DomiNexDefinition dominex, string status)
+        {
+            var rarityColor = DomiNexUiStyles.GetRarityColor(dominex.Rarity);
+            var background = Color.Lerp(new Color(0.07f, 0.08f, 0.11f, 0.98f), rarityColor, 0.18f);
+            var body = $"{dominex.Rarity}  |  {status}  |  {string.Join(", ", dominex.Tags)}\n{dominex.Description}";
+            AddCard(dominex.Name, body, 112f, background, rarityColor, rarityColor, dominex.Rarity.ToString().ToUpperInvariant());
         }
 
         private void RenderBossCollection()
@@ -227,19 +235,26 @@ namespace DomiNox.UI
             AddCard(title, body, 92f, new Color(0.11f, 0.13f, 0.18f, 1f), new Color(0.95f, 0.84f, 0.36f));
         }
 
-        private void AddCard(string title, string body, float height = 108f, Color? backgroundColor = null, Color? titleColor = null)
+        private void AddCard(string title, string body, float height = 108f, Color? backgroundColor = null, Color? titleColor = null, Color? outlineColor = null, string badge = null)
         {
             var card = new GameObject($"Card_{title}", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(VerticalLayoutGroup), typeof(LayoutElement));
             card.transform.SetParent(collectionContent, false);
             card.GetComponent<Image>().color = backgroundColor ?? new Color(0.085f, 0.1f, 0.13f, 0.98f);
             var outline = card.GetComponent<Outline>();
-            outline.effectColor = new Color(0.18f, 0.24f, 0.32f);
-            outline.effectDistance = new Vector2(2f, -2f);
+            outline.effectColor = outlineColor ?? new Color(0.18f, 0.24f, 0.32f);
+            outline.effectDistance = outlineColor.HasValue ? new Vector2(4f, -4f) : new Vector2(2f, -2f);
             card.GetComponent<LayoutElement>().preferredHeight = height;
 
             var layout = card.GetComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(16, 16, 10, 10);
             layout.spacing = 6f;
+
+            if (!string.IsNullOrWhiteSpace(badge))
+            {
+                var badgeText = UiFactory.CreateText(card.transform, "Badge", badge, 12, TextAnchor.MiddleLeft);
+                badgeText.color = outlineColor ?? Color.white;
+                badgeText.GetComponent<LayoutElement>().preferredHeight = 18f;
+            }
 
             var titleText = UiFactory.CreateText(card.transform, "Title", title, 18, TextAnchor.MiddleLeft);
             titleText.color = titleColor ?? new Color(0.96f, 0.88f, 0.52f);
