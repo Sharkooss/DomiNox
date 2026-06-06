@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DomiNox.Patterns;
 
 namespace DomiNox.Dominex
 {
@@ -70,6 +71,12 @@ namespace DomiNox.Dominex
             Define("relance_vip", "Relance VIP", DomiNexRarity.Rare, "Une fois par niveau, tu peux relancer toute ta main pour 0 action.", Tags("draw", "comfort"), Future("Needs reroll UI action.")),
             Define("valeur_fetiche", "Valeur Fetiche", DomiNexRarity.Rare, "Au debut de chaque niveau, une valeur entre 0 et 6 est choisie. Les dominos contenant cette valeur donnent +2 Mult.", Tags("value", "mult"), Future("Needs level random modifier.")),
             Define("combo_tardif", "Combo Tardif", DomiNexRarity.Rare, "Si tu valides apres avoir utilise au moins 1 discard, +8 Mult.", Tags("discard", "mult"), Future("Needs discard timing reward.")),
+            Define("plan_de_table", "Plan de Table", DomiNexRarity.Rare, "Si tu declenches un design pattern, +2 Mult.", Tags("pattern", "planning"), Scoring(DomiNexEffectType.AddMultIfAnyDesignPattern, 2)),
+            Define("dernier_discard", "Dernier Discard", DomiNexRarity.Rare, "Si tu valides avec 0 discard restant, +6 Mult.", Tags("discard", "risk", "mult"), Scoring(DomiNexEffectType.AddMultIfNoDiscardRemaining, 6)),
+            Define("main_econome_complexe", "Main Econome", DomiNexRarity.Rare, "Si tu gagnes avec tous tes discards restants, +3 credits.", Tags("discard", "credits"), Future("Handled by level reward.")),
+            Define("sept_porte_bonheur", "Sept Porte-Bonheur", DomiNexRarity.Rare, "Le premier domino somme 7 donne +5 Count et +2 Mult. Jackpot 7 donne +3 Mult.", Tags("seven", "jackpot", "mult"), Scoring(DomiNexEffectType.AddCountAndMultToFirstSumExactly, 5, 7), Scoring(DomiNexEffectType.AddMultIfPattern, 3, 0, PatternNames.JackpotSeven)),
+            Define("petite_machine", "Petite Machine", DomiNexRarity.Rare, "Chaque domino de somme <= 3 donne +1 Mult. Si 4 dominos de somme <= 5 sont joues, +20 Count.", Tags("low", "mult", "combo"), Scoring(DomiNexEffectType.AddMultPerDominoSumAtMost, 1, 3), Scoring(DomiNexEffectType.AddCountIfDominoSumAtMostCountAtLeast, 20, 5)),
+            Define("haute_pression", "Haute Pression", DomiNexRarity.Rare, "Chaque domino de somme >= 10 donne +8 Count. Si aucun n'est joue, -1 Mult.", Tags("high", "count", "risk"), Scoring(DomiNexEffectType.AddCountPerDominoSumAtLeastWithPenalty, 8, 10)),
 
             Define("architecte_du_casino", "Architecte du Casino", DomiNexRarity.Epic, "Les suites longues et les patterns d'equilibre donnent deux fois plus de Mult.", Tags("pattern", "mult"), Future("Needs advanced patterns.")),
             Define("sac_dore", "Sac Dore", DomiNexRarity.Epic, "Les dominos dores donnent +2 credits au lieu de +1.", Tags("gold", "credits"), Future("Needs special domino traits.")),
@@ -79,10 +86,16 @@ namespace DomiNox.Dominex
             Define("jackpot_instable", "Jackpot Instable", DomiNexRarity.Epic, "A chaque fois que tu declenches un Jackpot, gagne x1.5 score final, mais le prochain shop a +20% de prix.", Tags("seven", "risk"), Future("Needs final score multiplier and shop modifier.")),
             Define("oeil_du_croupier", "Oeil du Croupier", DomiNexRarity.Epic, "Tu vois les 3 prochains dominos du sac.", Tags("draw", "planning"), Future("Needs bag peek UI.")),
             Define("domino_fantome", "Domino Fantome", DomiNexRarity.Epic, "Le premier domino joue a chaque niveau est copie en version fantome, qui ne compte pas dans la limite de pose.", Tags("copy", "limit"), Future("Needs ghost placement model.")),
+            Define("chasseur_de_boucle", "Chasseur de Boucle", DomiNexRarity.Epic, "Si le design pattern principal est Loop, +50 Count et +3 Mult.", Tags("loop", "design", "mult"), Scoring(DomiNexEffectType.AddCountAndMultIfPattern, 50, 3, PatternNames.Loop)),
+            Define("banque_fermee", "Banque Fermee", DomiNexRarity.Epic, "+1 Mult par tranche de 8 credits. Les interets sont desactives pendant le cash out.", Tags("economy", "mult", "risk"), Scoring(DomiNexEffectType.AddMultPerCreditStepNoInterest, 1, 8)),
+            Define("tout_ou_rien", "Tout ou Rien", DomiNexRarity.Epic, "Si tu utilises exactement ta limite de pose, score final x1.2. Sinon -2 Mult.", Tags("limit", "risk", "scoring"), Scoring(DomiNexEffectType.AddFinalMultiplierIfFullPlacedElseMultPenalty, 120, 2)),
+            Define("contre_boss", "Contre-Boss", DomiNexRarity.Epic, "Pendant un niveau boss, +25 Count et +3 Mult.", Tags("boss", "adaptive"), Scoring(DomiNexEffectType.AddCountAndMultIfBossLevel, 25, 3)),
+            Define("copie_conforme", "Copie Conforme", DomiNexRarity.Epic, "Le premier domino joue ajoute une deuxieme fois son Count de base.", Tags("copy", "first", "scoring"), Scoring(DomiNexEffectType.AddFirstDominoBaseCountAgain)),
 
             Define("roi_du_jackpot", "Roi du Jackpot", DomiNexRarity.Legendary, "Tous les effets Jackpot sont doubles.", Tags("seven", "legendary"), Future("Needs jackpot effect category.")),
             Define("casino_infini", "Casino Infini", DomiNexRarity.Legendary, "Apres avoir atteint le quota, tu peux continuer a jouer tes dominos restants pour augmenter tes credits bonus.", Tags("credits", "endgame"), Future("Needs post-quota play mode.")),
             Define("banquier_royal", "Banquier Royal", DomiNexRarity.Legendary, "Les interets n'ont plus de plafond.", Tags("economy", "legendary"), Future("Needs interest system.")),
+            Define("rituel_nox", "Rituel Nox", DomiNexRarity.Legendary, "Si un pattern de valeur et un pattern de design sont detectes, score final x1.5.", Tags("legendary", "pattern", "scoring"), Scoring(DomiNexEffectType.AddFinalMultiplierIfValueAndDesignPattern, 150)),
 
             Define("dette_rouge", "Dette Rouge", DomiNexRarity.Cursed, "Gagne immediatement 30 credits. Tous les shops coutent 20% plus cher jusqu'au prochain boss.", Tags("credits", "cursed"), RunStart(DomiNexEffectType.AddCredits, 30), Future("Needs shop and boss duration.")),
             Define("main_brulee", "Main Brulee", DomiNexRarity.Cursed, "+15 Mult de base. -2 taille de main.", Tags("mult", "cursed"), Scoring(DomiNexEffectType.AddMult, 15), Future("Needs hand size modifier."))
@@ -102,7 +115,7 @@ namespace DomiNox.Dominex
         {
             return definition != null
                 && !TemporarilyDisabledIds.Contains(definition.Id)
-                && (definition.Id == "main_stable" || definition.Effects.Any(effect => effect.Trigger != DomiNexTrigger.FutureHook));
+                && (definition.Id == "main_stable" || definition.Id == "main_econome_complexe" || definition.Effects.Any(effect => effect.Trigger != DomiNexTrigger.FutureHook));
         }
 
         private static DomiNexDefinition Define(string id, string name, DomiNexRarity rarity, string description, IReadOnlyList<string> tags, params DomiNexEffectDefinition[] effects)
@@ -111,7 +124,7 @@ namespace DomiNox.Dominex
         }
 
         private static IReadOnlyList<string> Tags(params string[] tags) => tags;
-        private static DomiNexEffectDefinition Scoring(DomiNexEffectType type, int value = 0, int threshold = 0) => new DomiNexEffectDefinition(DomiNexTrigger.Scoring, type, value, threshold);
+        private static DomiNexEffectDefinition Scoring(DomiNexEffectType type, int value = 0, int threshold = 0, string note = "") => new DomiNexEffectDefinition(DomiNexTrigger.Scoring, type, value, threshold, note);
         private static DomiNexEffectDefinition LevelStart(DomiNexEffectType type, int value = 0, int threshold = 0) => new DomiNexEffectDefinition(DomiNexTrigger.LevelStart, type, value, threshold);
         private static DomiNexEffectDefinition RunStart(DomiNexEffectType type, int value = 0, int threshold = 0) => new DomiNexEffectDefinition(DomiNexTrigger.RunStart, type, value, threshold);
         private static DomiNexEffectDefinition Future(string note) => new DomiNexEffectDefinition(DomiNexTrigger.FutureHook, DomiNexEffectType.FutureHook, note: note);

@@ -9,6 +9,7 @@ namespace DomiNox.UI
     public sealed class DomiNexBarView : MonoBehaviour
     {
         private Transform slotsRoot;
+        private Text title;
         private DomiNexDetailCardView hoverCard;
         private RectTransform hoverRect;
         private Canvas canvas;
@@ -30,7 +31,7 @@ namespace DomiNox.UI
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
 
-            var title = UiFactory.CreateText(transform, "Title", "DomiNex", 14, TextAnchor.MiddleCenter);
+            title = UiFactory.CreateText(transform, "Title", "DomiNex", 14, TextAnchor.MiddleCenter);
             title.color = new Color(0.98f, 0.84f, 0.34f);
             title.GetComponent<LayoutElement>().preferredWidth = 72f;
 
@@ -59,30 +60,38 @@ namespace DomiNox.UI
                 Destroy(child.gameObject);
             }
 
-            if (run.DomiNexInventory.Active.Count == 0)
-            {
-                CreateEmptySlot();
-                hoverCard.gameObject.SetActive(false);
-                return;
-            }
+            title.text = $"DomiNex\n{run.ActiveDomiNexCount}/{run.MaxDomiNexSlots}";
 
             foreach (var definition in run.DomiNexInventory.Active)
             {
                 CreateDomiNexCard(definition);
             }
+
+            for (var i = run.DomiNexInventory.Active.Count; i < run.MaxDomiNexSlots; i++)
+            {
+                CreateEmptySlot(i);
+            }
+
+            if (run.DomiNexInventory.Active.Count == 0)
+            {
+                hoverCard.gameObject.SetActive(false);
+            }
         }
 
-        private void CreateEmptySlot()
+        private void CreateEmptySlot(int index)
         {
-            var slot = new GameObject("EmptyDomiNex", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            var slot = new GameObject($"EmptyDomiNex_{index}", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(LayoutElement));
             slot.transform.SetParent(slotsRoot, false);
             slot.GetComponent<Image>().color = new Color(0.09f, 0.11f, 0.16f, 0.95f);
+            var outline = slot.GetComponent<Outline>();
+            outline.effectColor = new Color(0.18f, 0.23f, 0.3f);
+            outline.effectDistance = new Vector2(1f, -1f);
             var layout = slot.GetComponent<LayoutElement>();
-            layout.preferredWidth = 170f;
-            layout.preferredHeight = 44f;
+            layout.preferredWidth = 48f;
+            layout.preferredHeight = 48f;
 
-            var text = UiFactory.CreateText(slot.transform, "Label", "Aucun DomiNex actif", 13, TextAnchor.MiddleCenter);
-            text.color = new Color(0.55f, 0.62f, 0.72f);
+            var text = UiFactory.CreateText(slot.transform, "Label", "+", 16, TextAnchor.MiddleCenter);
+            text.color = new Color(0.35f, 0.42f, 0.52f);
             Stretch(text.rectTransform);
         }
 

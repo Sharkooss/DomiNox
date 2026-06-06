@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using DomiNox.Grid;
+using DomiNox.Patterns;
 using DomiNox.Run;
 
 namespace DomiNox.Dominex
@@ -31,7 +32,7 @@ namespace DomiNox.Dominex
             }
         }
 
-        public void ApplyScoringEffects(List<PlacedDomino> placedDominoes, DomiNexScoringContext context, ref int count, ref int mult, List<string> breakdown)
+        public void ApplyScoringEffects(List<PlacedDomino> placedDominoes, DomiNexScoringContext context, ref int count, ref int mult, ref float finalScoreMultiplier, List<string> breakdown)
         {
             if (context == null || context.ActiveDomiNex == null)
             {
@@ -42,7 +43,7 @@ namespace DomiNox.Dominex
             {
                 foreach (var effect in dominex.Effects.Where(effect => effect.Trigger == DomiNexTrigger.Scoring))
                 {
-                    ApplyScoringEffect(dominex, effect, placedDominoes, context, ref count, ref mult, breakdown);
+                    ApplyScoringEffect(dominex, effect, placedDominoes, context, ref count, ref mult, ref finalScoreMultiplier, breakdown);
                 }
             }
         }
@@ -57,7 +58,7 @@ namespace DomiNox.Dominex
             return inventory.Active.SelectMany(definition => definition.Effects).Where(effect => effect.Trigger == trigger);
         }
 
-        private static void ApplyScoringEffect(DomiNexDefinition dominex, DomiNexEffectDefinition effect, List<PlacedDomino> placedDominoes, DomiNexScoringContext context, ref int count, ref int mult, List<string> breakdown)
+        private static void ApplyScoringEffect(DomiNexDefinition dominex, DomiNexEffectDefinition effect, List<PlacedDomino> placedDominoes, DomiNexScoringContext context, ref int count, ref int mult, ref float finalScoreMultiplier, List<string> breakdown)
         {
             switch (effect.Type)
             {
@@ -133,7 +134,107 @@ namespace DomiNox.Dominex
                         AddLine(breakdown, dominex, $"{effect.Value:+#;-#;0} Mult");
                     }
                     break;
+                case DomiNexEffectType.AddMultIfAnyDesignPattern:
+                    if (context.DetectedPatterns.Any(pattern => pattern.Category == PatternCategory.Design))
+                    {
+                        mult += effect.Value;
+                        AddLine(breakdown, dominex, $"{effect.Value:+#;-#;0} Mult");
+                    }
+                    break;
+                case DomiNexEffectType.AddCountAndMultIfPattern:
+                    if (HasPattern(context, effect.Note))
+                    {
+                        count += effect.Value;
+                        mult += effect.Threshold;
+                        AddLine(breakdown, dominex, $"+{effect.Value} Count, +{effect.Threshold} Mult");
+                    }
+                    break;
+                case DomiNexEffectType.AddMultIfNoDiscardRemaining:
+                    if (context.DiscardsRemaining == 0)
+                    {
+                        mult += effect.Value;
+                        AddLine(breakdown, dominex, $"{effect.Value:+#;-#;0} Mult");
+                    }
+                    break;
+                case DomiNexEffectType.AddMultPerCreditStepNoInterest:
+                    var steps = effect.Threshold <= 0 ? 0 : context.Credits / effect.Threshold;
+                    ApplyPerDominoMult(dominex, steps, effect.Value, ref mult, breakdown);
+                    break;
+                case DomiNexEffectType.AddCountAndMultToFirstSumExactly:
+                    if (placedDominoes.Count > 0 && placedDominoes[0].Domino.Definition.Sum == effect.Threshold)
+                    {
+                        count += effect.Value;
+                        mult += 2;
+                        AddLine(breakdown, dominex, $"+{effect.Value} Count, +2 Mult");
+                    }
+                    break;
+                case DomiNexEffectType.AddMultIfPattern:
+                    if (HasPattern(context, effect.Note))
+                    {
+                        mult += effect.Value;
+                        AddLine(breakdown, dominex, $"{effect.Value:+#;-#;0} Mult");
+                    }
+                    break;
+                case DomiNexEffectType.AddCountIfDominoSumAtMostCountAtLeast:
+                    if (placedDominoes.Count(placed => placed.Domino.Definition.Sum <= effect.Threshold) >= 4)
+                    {
+                        count += effect.Value;
+                        AddLine(breakdown, dominex, $"{effect.Value:+#;-#;0} Count");
+                    }
+                    break;
+                case DomiNexEffectType.AddCountPerDominoSumAtLeastWithPenalty:
+                    var highCount = placedDominoes.Count(placed => placed.Domino.Definition.Sum >= effect.Threshold);
+                    if (highCount > 0)
+                    {
+                        ApplyPerDominoCount(dominex, highCount, effect.Value, ref count, breakdown);
+                    }
+                    else
+                    {
+                        mult -= 1;
+                        AddLine(breakdown, dominex, "-1 Mult");
+                    }
+                    break;
+                case DomiNexEffectType.AddCountAndMultIfBossLevel:
+                    if (context.Boss != null)
+                    {
+                        count += effect.Value;
+                        mult += effect.Threshold;
+                        AddLine(breakdown, dominex, $"+{effect.Value} Count, +{effect.Threshold} Mult");
+                    }
+                    break;
+                case DomiNexEffectType.AddFirstDominoBaseCountAgain:
+                    if (placedDominoes.Count > 0)
+                    {
+                        var firstSum = placedDominoes[0].Domino.Definition.Sum;
+                        count += firstSum;
+                        AddLine(breakdown, dominex, $"+{firstSum} Count");
+                    }
+                    break;
+                case DomiNexEffectType.AddFinalMultiplierIfValueAndDesignPattern:
+                    if (context.DetectedPatterns.Any(pattern => pattern.Category == PatternCategory.Value) && context.DetectedPatterns.Any(pattern => pattern.Category == PatternCategory.Design))
+                    {
+                        finalScoreMultiplier *= effect.Value / 100f;
+                        AddLine(breakdown, dominex, $"x{effect.Value / 100f:0.##} score final");
+                    }
+                    break;
+                case DomiNexEffectType.AddFinalMultiplierIfFullPlacedElseMultPenalty:
+                    if (placedDominoes.Count == context.MaxPlacedDominoes)
+                    {
+                        finalScoreMultiplier *= effect.Value / 100f;
+                        AddLine(breakdown, dominex, $"x{effect.Value / 100f:0.##} score final");
+                    }
+                    else
+                    {
+                        mult -= effect.Threshold;
+                        AddLine(breakdown, dominex, $"-{effect.Threshold} Mult");
+                    }
+                    break;
             }
+        }
+
+        private static bool HasPattern(DomiNexScoringContext context, string patternName)
+        {
+            return context.DetectedPatterns.Any(pattern => pattern.Name == patternName);
         }
 
         private static void ApplyPerDominoCount(DomiNexDefinition dominex, int matches, int value, ref int count, List<string> breakdown)

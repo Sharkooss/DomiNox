@@ -336,6 +336,12 @@ namespace DomiNox.Run
                 return;
             }
 
+            if (!Run.HasFreeDomiNexSlot())
+            {
+                Notify("Slots DomiNex pleins.");
+                return;
+            }
+
             if (Run.Credits < offer.Price)
             {
                 Notify("Credits insuffisants.");
@@ -393,7 +399,14 @@ namespace DomiNox.Run
         {
             var level = Run.CurrentLevel;
             var discardCredits = level.DiscardsRemaining * GameConstants.CreditsPerRemainingDiscard;
-            var interestCredits = System.Math.Min(GameConstants.MaxInterestCredits, Run.Credits / GameConstants.InterestCreditStep);
+            if (level.DiscardsRemaining == GameConstants.PhaseOneDiscards && dominexEffectEngine.HasActive(Run.DomiNexInventory, "main_econome_complexe"))
+            {
+                discardCredits += 3;
+            }
+
+            var interestCredits = dominexEffectEngine.HasActive(Run.DomiNexInventory, "banque_fermee")
+                ? 0
+                : System.Math.Min(GameConstants.MaxInterestCredits, Run.Credits / GameConstants.InterestCreditStep);
             Run.CurrentReward = new LevelRewardState(GameConstants.LevelWinCredits, discardCredits, interestCredits);
             Run.Phase = RunPhase.LevelReward;
         }
@@ -532,7 +545,7 @@ namespace DomiNox.Run
 
         private DomiNexScoringContext CreateScoringContext(LevelState level)
         {
-            return new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.MaxPlacedDominoes);
+            return new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.DiscardsRemaining, level.MaxPlacedDominoes);
         }
 
         private void Notify(string message)

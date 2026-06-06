@@ -8,6 +8,7 @@ namespace DomiNox.Dominex
         private readonly List<DomiNexDefinition> active = new List<DomiNexDefinition>();
 
         public IReadOnlyList<DomiNexDefinition> Active => active;
+        public int Count => active.Count;
 
         public void SetActive(IEnumerable<DomiNexDefinition> definitions)
         {
@@ -24,6 +25,11 @@ namespace DomiNox.Dominex
 
             active.Add(definition);
             return true;
+        }
+
+        public bool CanAdd(DomiNexDefinition definition, int maxSlots)
+        {
+            return definition != null && !Contains(definition.Id) && active.Count < maxSlots;
         }
 
         public bool Contains(string id) => active.Any(definition => definition.Id == id);

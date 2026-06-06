@@ -66,10 +66,14 @@ namespace DomiNox.Scoring
                 }
             }
 
-            dominexEffectEngine.ApplyScoringEffects(placedDominoes, dominexContext, ref count, ref mult, breakdown);
+            dominexContext = dominexContext?.WithDetectedPatterns(detectedPatternInfos, boss);
+            dominexEffectEngine.ApplyScoringEffects(placedDominoes, dominexContext, ref count, ref mult, ref finalScoreMultiplier, breakdown);
 
+            mult = System.Math.Max(1, mult);
             var finalScore = (int)System.Math.Ceiling(count * mult * finalScoreMultiplier);
-            breakdown.Add($"Score final: {count} x {mult} = {finalScore}");
+            breakdown.Add(finalScoreMultiplier == 1f
+                ? $"Score final: {count} x {mult} = {finalScore}"
+                : $"Score final: {count} x {mult} x {finalScoreMultiplier:0.##} = {finalScore}");
             return new ScoreResult(count, mult, finalScore, patterns, breakdown);
         }
     }

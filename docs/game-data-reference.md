@@ -14,6 +14,7 @@ Ce fichier recense les valeurs éditables actuelles du prototype. À mettre à j
 | Starting quota | 80 | `GameConstants.PhaseOneQuota` |
 | Quota increase per level | 40 | `GameConstants.LevelQuotaIncrease` |
 | Starting credits | 10 | `GameConstants.StartingCredits` |
+| Max DomiNex slots | 5 | `GameConstants.StartingDomiNexSlots` |
 | Max placed dominoes | 5 | `GameConstants.PhaseOneMaxPlacedDominoes` |
 | Discards | 3 | `GameConstants.PhaseOneDiscards` |
 | Win credits | 5 | `GameConstants.LevelWinCredits` |
@@ -24,6 +25,8 @@ Ce fichier recense les valeurs éditables actuelles du prototype. À mettre à j
 ## Core Round Rules
 
 Chaque niveau commence avec une main de 7 dominos, une limite de 5 dominos posables et 3 discards disponibles. Il n'y a plus d'action points et il n'y a pas de bouton Draw. Le joueur peut defausser pour remplacer des dominos, poser jusqu'a la limite, puis valider une seule fois pour gagner ou perdre le niveau.
+
+Le joueur commence avec 5 slots de DomiNex actifs. La limite est stockee dans `RunState.MaxDomiNexSlots` et appliquee au moment de l'achat, pas seulement dans l'UI.
 
 ## Scoring Formula
 
@@ -121,6 +124,12 @@ Les boss apparaissent tous les 5 niveaux. Le boss actif est choisi aleatoirement
 | relance_vip | Relance VIP | Rare | draw, comfort | Futur: relance toute la main pour 0 action une fois par niveau. |
 | valeur_fetiche | Valeur Fetiche | Rare | value, mult | Futur: valeur choisie au niveau donne +2 Mult. |
 | combo_tardif | Combo Tardif | Rare | discard, mult | Futur: validation après au moins 1 discard donne +8 Mult. |
+| plan_de_table | Plan de Table | Rare | pattern, planning | Si un design pattern est detecte, +2 Mult. |
+| dernier_discard | Dernier Discard | Rare | discard, risk, mult | Si validation avec 0 discard restant, +6 Mult. |
+| main_econome_complexe | Main Econome | Rare | discard, credits | Si niveau gagne avec tous les discards restants, +3 credits au cash out. |
+| sept_porte_bonheur | Sept Porte-Bonheur | Rare | seven, jackpot, mult | Premier domino somme 7: +5 Count et +2 Mult. Jackpot 7: +3 Mult. |
+| petite_machine | Petite Machine | Rare | low, mult, combo | Somme <= 3: +1 Mult par domino. Si 4 dominos somme <= 5: +20 Count. |
+| haute_pression | Haute Pression | Rare | high, count, risk | Somme >= 10: +8 Count par domino. Si aucun, -1 Mult. |
 | architecte_du_casino | Architecte du Casino | Epic | pattern, mult | Futur: suites longues et équilibre donnent deux fois plus de Mult. |
 | sac_dore | Sac Dore | Epic | gold, credits | Futur: dominos dorés donnent +2 crédits au lieu de +1. |
 | limite_brisee | Limite Brisee | Epic | limit, discard | +1 domino jouable. Futur: -1 discard. |
@@ -129,15 +138,23 @@ Les boss apparaissent tous les 5 niveaux. Le boss actif est choisi aleatoirement
 | jackpot_instable | Jackpot Instable | Epic | seven, risk | Futur: jackpot donne x1.5 score final, prochain shop +20%. |
 | oeil_du_croupier | Oeil du Croupier | Epic | draw, planning | Futur: voir les 3 prochains dominos du sac. |
 | domino_fantome | Domino Fantome | Epic | copy, limit | Futur: premier domino copié en fantôme hors limite. |
+| chasseur_de_boucle | Chasseur de Boucle | Epic | loop, design, mult | Si `Loop` est detecte, +50 Count et +3 Mult. |
+| banque_fermee | Banque Fermee | Epic | economy, mult, risk | +1 Mult par tranche de 8 credits. Interets cash out desactives. |
+| tout_ou_rien | Tout ou Rien | Epic | limit, risk, scoring | Si limite de pose exacte, score final x1.2. Sinon -2 Mult. |
+| contre_boss | Contre-Boss | Epic | boss, adaptive | Pendant un niveau boss: +25 Count et +3 Mult. |
+| copie_conforme | Copie Conforme | Epic | copy, first, scoring | Le premier domino ajoute une deuxieme fois son Count de base. |
 | roi_du_jackpot | Roi du Jackpot | Legendary | seven, legendary | Futur: tous les effets Jackpot sont doublés. |
 | casino_infini | Casino Infini | Legendary | credits, endgame | Futur: continuer après quota pour crédits bonus. |
 | banquier_royal | Banquier Royal | Legendary | economy, legendary | Futur: intérêts sans plafond. |
+| rituel_nox | Rituel Nox | Legendary | legendary, pattern, scoring | Si un pattern de valeur et un pattern de design sont detectes, score final x1.5. |
 | dette_rouge | Dette Rouge | Cursed | credits, cursed | +30 crédits au run start. Futur: shops +20% jusqu'au boss. |
 | main_brulee | Main Brulee | Cursed | mult, cursed | +15 Mult. Futur: -2 taille de main. |
 
 ## Shop Notes
 
 Le shop actuel génère 3 offres DomiNex pondérées par rareté et exclut les DomiNex déjà possédés. Les DomiNex maudits ne sont pas dans le pool normal pour l'instant. Le shop prototype exclut aussi les DomiNex sans effet actuel et les DomiNex temporairement désactivés.
+
+Les achats de DomiNex sont bloques quand `ActiveDomiNexCount >= MaxDomiNexSlots`. Le shop affiche `DomiNex X/5`; un achat refuse ne retire aucun credit.
 
 Temporarily disabled: `domino_poli`, `tapis_bleu`, `casino_bleu`, `casino_rouge`, `mise_verte`, `sac_dore`, `full_nox_rare`, `limite_brisee`.
 

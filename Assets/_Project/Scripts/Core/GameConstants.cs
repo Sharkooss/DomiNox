@@ -11,6 +11,7 @@ namespace DomiNox.Core
         public const int ClassicLevelsPerFloor = 4;
         public const int PhaseOneQuota = 80;
         public const int StartingCredits = 10;
+        public const int StartingDomiNexSlots = 5;
         public const int PhaseOneMaxPlacedDominoes = 5;
         public const int PhaseOneDiscards = 3;
         public const int LevelQuotaIncrease = 40;

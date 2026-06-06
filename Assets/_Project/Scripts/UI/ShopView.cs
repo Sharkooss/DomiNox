@@ -85,7 +85,7 @@ namespace DomiNox.UI
                 return;
             }
 
-            title.text = $"SHOP - DOMINEX   Credits: {run.Credits}";
+            title.text = $"SHOP - DOMINEX   Credits: {run.Credits}   DomiNex {run.ActiveDomiNexCount}/{run.MaxDomiNexSlots}";
             foreach (Transform child in offersRoot)
             {
                 Destroy(child.gameObject);
@@ -100,13 +100,13 @@ namespace DomiNox.UI
 
             for (var i = 0; i < run.CurrentShop.Offers.Count; i++)
             {
-                CreateOffer(i, run.CurrentShop.Offers[i], run.Credits);
+                CreateOffer(i, run.CurrentShop.Offers[i], run);
             }
 
             detailCard.Render(run.CurrentShop.Offers[0].DomiNex);
         }
 
-        private void CreateOffer(int index, ShopOffer offer, int credits)
+        private void CreateOffer(int index, ShopOffer offer, RunState run)
         {
             var root = new GameObject($"Offer_{index}", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(Image), typeof(Outline), typeof(LayoutElement), typeof(DomiNexHoverTarget));
             root.transform.SetParent(offersRoot, false);
@@ -138,9 +138,11 @@ namespace DomiNox.UI
             description.color = new Color(0.82f, 0.86f, 0.92f);
             description.GetComponent<LayoutElement>().flexibleHeight = 1f;
 
-            var button = UiFactory.CreateButton(root.transform, "BuyButton", offer.IsPurchased ? "Acheté" : $"Acheter ${offer.Price}");
+            var slotsFull = !run.HasFreeDomiNexSlot();
+            var buttonLabel = offer.IsPurchased ? "Acheté" : slotsFull ? "Slots pleins" : $"Acheter ${offer.Price}";
+            var button = UiFactory.CreateButton(root.transform, "BuyButton", buttonLabel);
             button.GetComponent<LayoutElement>().preferredHeight = 44f;
-            button.interactable = !offer.IsPurchased && credits >= offer.Price;
+            button.interactable = !offer.IsPurchased && run.Credits >= offer.Price && !slotsFull;
             var capturedIndex = index;
             button.onClick.AddListener(() => controller.BuyShopOffer(capturedIndex));
         }
