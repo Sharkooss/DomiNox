@@ -32,6 +32,18 @@ namespace DomiNox.Dominex
             return definition != null && !Contains(definition.Id) && active.Count < maxSlots;
         }
 
+        public bool Remove(string id)
+        {
+            var definition = active.FirstOrDefault(item => item.Id == id);
+            if (definition == null)
+            {
+                return false;
+            }
+
+            active.Remove(definition);
+            return true;
+        }
+
         public bool Contains(string id) => active.Any(definition => definition.Id == id);
     }
 }

@@ -1,9 +1,11 @@
 using System;
 using System.Linq;
 using DomiNox.Bosses;
+using DomiNox.Consumables;
 using DomiNox.Core;
 using DomiNox.Dominex;
 using DomiNox.Patterns;
+using DomiNox.Run;
 using DomiNox.Utilities;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -21,6 +23,7 @@ namespace DomiNox.UI
         private Button dominexTab;
         private Button bossesTab;
         private Button patternsTab;
+        private Button consumablesTab;
         private Button systemTab;
 
         private void Start()
@@ -100,6 +103,7 @@ namespace DomiNox.UI
             dominexTab = CreateTab(tabs.transform, "DomiNex", () => ShowCollectionTab(CollectionTab.DomiNex));
             bossesTab = CreateTab(tabs.transform, "Boss", () => ShowCollectionTab(CollectionTab.Bosses));
             patternsTab = CreateTab(tabs.transform, "Patterns", () => ShowCollectionTab(CollectionTab.Patterns));
+            consumablesTab = CreateTab(tabs.transform, "Consumables", () => ShowCollectionTab(CollectionTab.Consumables));
             systemTab = CreateTab(tabs.transform, "Systeme", () => ShowCollectionTab(CollectionTab.System));
 
             var scrollRoot = new GameObject("Scroll", typeof(RectTransform), typeof(ScrollRect), typeof(LayoutElement));
@@ -164,6 +168,7 @@ namespace DomiNox.UI
             SetTabColor(dominexTab, tab == CollectionTab.DomiNex);
             SetTabColor(bossesTab, tab == CollectionTab.Bosses);
             SetTabColor(patternsTab, tab == CollectionTab.Patterns);
+            SetTabColor(consumablesTab, tab == CollectionTab.Consumables);
             SetTabColor(systemTab, tab == CollectionTab.System);
 
             switch (tab)
@@ -176,6 +181,9 @@ namespace DomiNox.UI
                     break;
                 case CollectionTab.Patterns:
                     RenderPatternCollection();
+                    break;
+                case CollectionTab.Consumables:
+                    RenderConsumableCollection();
                     break;
                 case CollectionTab.System:
                     RenderSystemCollection();
@@ -208,7 +216,7 @@ namespace DomiNox.UI
             AddIntro("Boss", "Les boss apparaissent tous les 5 niveaux et sont tires aleatoirement dans ce pool.");
             foreach (var boss in BossRegistry.DemoBosses)
             {
-                AddCard(boss.Name, $"{boss.RuleType}  |  Quota x{boss.QuotaMultiplier:0.##}\n{boss.Description}");
+                AddCard(boss.Name, $"{boss.RuleType}\n{boss.Description}");
             }
         }
 
@@ -217,7 +225,38 @@ namespace DomiNox.UI
             AddIntro("Patterns", "Les patterns sont detectes au scoring. Le meilleur pattern de valeur et le meilleur pattern de design sont retenus.");
             foreach (var pattern in PatternCatalog.All.OrderBy(pattern => pattern.Category).ThenByDescending(pattern => pattern.Priority))
             {
+                if (!CollectableVisibilityService.IsPatternVisible(pattern, null))
+                {
+                    continue;
+                }
+
                 AddCard(pattern.Name, $"{pattern.Category}  |  Priorite {pattern.Priority}  |  {pattern.Effect}\n{pattern.Requirement}");
+            }
+
+            AddIntro("Combos", "Combinaisons Value Pattern + Design Pattern. Les combos secrets suivent la visibilite du Design Pattern secret associe.");
+            foreach (var combo in PatternComboCatalog.All.OrderBy(combo => combo.DesignPatternId).ThenBy(combo => combo.Name))
+            {
+                if (!CollectableVisibilityService.IsComboVisible(combo, null))
+                {
+                    continue;
+                }
+
+                AddCard(combo.Name, $"{PatternCatalog.GetById(combo.ValuePatternId)?.Name} + {PatternCatalog.GetById(combo.DesignPatternId)?.Name}\n+{combo.CountBonus} Tile, +{combo.MultBonus} Mult  |  {combo.Difficulty}");
+            }
+        }
+
+        private void RenderConsumableCollection()
+        {
+            AddIntro("Consumables", "Gem Tiles stockables et utilisables manuellement. Elles ameliorent le niveau du pattern cible.");
+            foreach (var consumable in GemTileRegistry.All.OrderBy(item => item.Name))
+            {
+                if (!CollectableVisibilityService.IsConsumableVisible(consumable, null))
+                {
+                    continue;
+                }
+
+                var pattern = PatternCatalog.GetById(consumable.TargetPatternId);
+                AddCard(consumable.Name, $"Gem Tile  |  Price ${consumable.Price}\nTarget: {pattern?.Name ?? consumable.TargetPatternId}\n{consumable.Description}");
             }
         }
 
@@ -288,7 +327,7 @@ namespace DomiNox.UI
 
         private static void EnsureEventSystem()
         {
-            if (FindObjectOfType<EventSystem>() == null)
+            if (FindAnyObjectByType<EventSystem>() == null)
             {
                 new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             }
@@ -299,6 +338,7 @@ namespace DomiNox.UI
             DomiNex,
             Bosses,
             Patterns,
+            Consumables,
             System
         }
     }

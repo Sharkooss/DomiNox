@@ -1,4 +1,7 @@
+using System.Collections.Generic;
+using DomiNox.Consumables;
 using DomiNox.Dominex;
+using DomiNox.Patterns;
 using DomiNox.Run;
 using DomiNox.Utilities;
 using UnityEngine;
@@ -9,13 +12,20 @@ namespace DomiNox.UI
     public sealed class DomiNexBarView : MonoBehaviour
     {
         private Transform slotsRoot;
+        private Transform consumablesRoot;
         private Text title;
+        private Text consumablesTitle;
+        private Button useButton;
         private DomiNexDetailCardView hoverCard;
         private RectTransform hoverRect;
         private Canvas canvas;
+        private RunState currentRun;
+        private GameFlowController controller;
+        private readonly Dictionary<string, RectTransform> activeCards = new Dictionary<string, RectTransform>();
 
-        public void Initialize()
+        public void Initialize(GameFlowController flowController)
         {
+            controller = flowController;
             var background = gameObject.AddComponent<Image>();
             background.color = new Color(0.05f, 0.08f, 0.14f, 0.88f);
             var outline = gameObject.AddComponent<Outline>();
@@ -26,7 +36,7 @@ namespace DomiNox.UI
 
             var layout = gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(8, 8, 6, 6);
-            layout.spacing = 8f;
+            layout.spacing = 12f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = false;
@@ -44,6 +54,32 @@ namespace DomiNox.UI
             slotsLayout.childForceExpandWidth = false;
             slotsLayout.childForceExpandHeight = false;
 
+            var separator = UiFactory.CreateText(transform, "Separator", "|", 22, TextAnchor.MiddleCenter);
+            separator.color = new Color(0.25f, 0.32f, 0.42f);
+            separator.GetComponent<LayoutElement>().preferredWidth = 12f;
+
+            var consumablesPanel = new GameObject("ConsumablesPanel", typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            consumablesPanel.transform.SetParent(transform, false);
+            consumablesPanel.GetComponent<LayoutElement>().preferredWidth = 230f;
+            var consumablesLayout = consumablesPanel.GetComponent<VerticalLayoutGroup>();
+            consumablesLayout.spacing = 3f;
+            consumablesLayout.childAlignment = TextAnchor.MiddleCenter;
+
+            consumablesTitle = UiFactory.CreateText(consumablesPanel.transform, "ConsumablesTitle", "Consumables", 12, TextAnchor.MiddleCenter);
+            consumablesTitle.color = new Color(0.76f, 0.9f, 1f);
+            consumablesTitle.GetComponent<LayoutElement>().preferredHeight = 16f;
+            consumablesRoot = new GameObject("ConsumableSlots", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement)).transform;
+            consumablesRoot.SetParent(consumablesPanel.transform, false);
+            consumablesRoot.GetComponent<LayoutElement>().preferredHeight = 34f;
+            var consumableSlotsLayout = consumablesRoot.GetComponent<HorizontalLayoutGroup>();
+            consumableSlotsLayout.spacing = 6f;
+            consumableSlotsLayout.childAlignment = TextAnchor.MiddleCenter;
+            consumableSlotsLayout.childForceExpandWidth = false;
+
+            useButton = UiFactory.CreateButton(consumablesPanel.transform, "UseConsumable", "Use");
+            useButton.GetComponent<LayoutElement>().preferredWidth = 82f;
+            useButton.GetComponent<LayoutElement>().preferredHeight = 24f;
+
             hoverCard = new GameObject("DomiNexHoverOverlay", typeof(RectTransform), typeof(CanvasGroup)).AddComponent<DomiNexDetailCardView>();
             hoverCard.transform.SetParent(canvas.transform, false);
             hoverRect = (RectTransform)hoverCard.transform;
@@ -60,7 +96,15 @@ namespace DomiNox.UI
                 Destroy(child.gameObject);
             }
 
+            foreach (Transform child in consumablesRoot)
+            {
+                Destroy(child.gameObject);
+            }
+
+            activeCards.Clear();
+
             title.text = $"DomiNex\n{run.ActiveDomiNexCount}/{run.MaxDomiNexSlots}";
+            currentRun = run;
 
             foreach (var definition in run.DomiNexInventory.Active)
             {
@@ -76,6 +120,54 @@ namespace DomiNox.UI
             {
                 hoverCard.gameObject.SetActive(false);
             }
+
+            consumablesTitle.text = $"Consumables {run.ActiveConsumableCount}/{DomiNox.Core.GameConstants.MaxConsumableSlots}";
+            for (var i = 0; i < DomiNox.Core.GameConstants.MaxConsumableSlots; i++)
+            {
+                CreateConsumableSlot(i, run);
+            }
+
+            RenderUseButton(run);
+        }
+
+        private void CreateConsumableSlot(int index, RunState run)
+        {
+            var id = index < run.Consumables.ActiveIds.Count ? run.Consumables.ActiveIds[index] : null;
+            var definition = GemTileRegistry.GetById(id);
+            var slot = new GameObject($"Consumable_{index}", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(LayoutElement), typeof(Button));
+            slot.transform.SetParent(consumablesRoot, false);
+            slot.GetComponent<Image>().color = definition == null ? new Color(0.09f, 0.11f, 0.16f, 0.95f) : new Color(0.09f, 0.18f, 0.2f, 0.98f);
+            var outline = slot.GetComponent<Outline>();
+            outline.effectColor = controllerSelected(index) ? new Color(1f, 0.84f, 0.25f) : new Color(0.22f, 0.42f, 0.48f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            slot.GetComponent<LayoutElement>().preferredWidth = 48f;
+            slot.GetComponent<LayoutElement>().preferredHeight = 32f;
+            var button = slot.GetComponent<Button>();
+            button.interactable = definition != null;
+            var capturedIndex = index;
+            button.onClick.AddListener(() => controller.SelectConsumable(capturedIndex));
+            var label = UiFactory.CreateText(slot.transform, "Label", definition == null ? "+" : definition.IconId, 12, TextAnchor.MiddleCenter);
+            label.color = definition == null ? new Color(0.35f, 0.42f, 0.52f) : new Color(0.76f, 1f, 0.94f);
+            Stretch(label.rectTransform);
+
+            bool controllerSelected(int slotIndex) => controller?.SelectedConsumableIndex == slotIndex;
+        }
+
+        private void RenderUseButton(RunState run)
+        {
+            var selected = controller == null ? -1 : controller.SelectedConsumableIndex;
+            useButton.gameObject.SetActive(selected >= 0 && selected < run.Consumables.Count);
+            useButton.onClick.RemoveAllListeners();
+            if (!useButton.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            var definition = GemTileRegistry.GetById(run.Consumables.ActiveIds[selected]);
+            var canUse = GemTileRegistry.CanUseConsumable(definition, run);
+            useButton.GetComponentInChildren<Text>().text = canUse ? "Use" : "Max Level";
+            useButton.interactable = canUse;
+            useButton.onClick.AddListener(controller.UseSelectedConsumable);
         }
 
         private void CreateEmptySlot(int index)
@@ -108,6 +200,7 @@ namespace DomiNox.UI
             layout.preferredWidth = 48f;
             layout.preferredHeight = 48f;
             card.GetComponent<DomiNexHoverTarget>().Initialize(definition, ShowHoverCard, HideHoverCard);
+            activeCards[definition.Id] = (RectTransform)card.transform;
 
             var icon = UiFactory.CreateText(card.transform, "Icon", GetIcon(definition), 17, TextAnchor.MiddleCenter);
             icon.color = rarityColor;
@@ -127,7 +220,7 @@ namespace DomiNox.UI
         private void ShowHoverCard(DomiNexDefinition definition, RectTransform source)
         {
             hoverCard.gameObject.SetActive(true);
-            hoverCard.Render(definition);
+            hoverCard.Render(definition, currentRun);
             PositionHoverCard(source);
         }
 
@@ -209,6 +302,11 @@ namespace DomiNox.UI
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+        }
+
+        public RectTransform GetDomiNexRect(string id)
+        {
+            return !string.IsNullOrWhiteSpace(id) && activeCards.TryGetValue(id, out var rect) ? rect : null;
         }
     }
 }

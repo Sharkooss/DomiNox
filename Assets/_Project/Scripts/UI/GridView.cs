@@ -77,6 +77,16 @@ namespace DomiNox.UI
             return false;
         }
 
+        public RectTransform GetDominoRect(PlacedDomino domino)
+        {
+            if (domino == null || domino.Position.X < 0 || domino.Position.X >= GameConstants.GridWidth || domino.Position.Y < 0 || domino.Position.Y >= GameConstants.GridHeight)
+            {
+                return null;
+            }
+
+            return (RectTransform)cells[domino.Position.X, domino.Position.Y].transform;
+        }
+
         public void RenderPreview(GridState grid, DominoInstance domino, GridPosition position, DominoOrientation orientation, bool valid)
         {
             Render(grid);

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DomiNox.Bosses;
+using DomiNox.Consumables;
 using DomiNox.Core;
 using DomiNox.Dominoes;
 using DomiNox.Dominex;
@@ -22,6 +23,7 @@ namespace DomiNox.Run
         private ScoreCalculator scoreCalculator;
         private ScoreResult lastScoreResult;
         private DominoInstance selectedDomino;
+        private int selectedConsumableIndex = -1;
         private readonly HashSet<DominoInstance> selectedForDiscard = new HashSet<DominoInstance>();
 
         public event Action<RunState, ScoreResult, string> StateChanged;
@@ -30,7 +32,11 @@ namespace DomiNox.Run
         public DominoOrientation CurrentOrientation { get; private set; } = DominoOrientation.HorizontalRight;
         public DominoInstance SelectedDomino => selectedDomino;
         public IReadOnlyCollection<DominoInstance> SelectedForDiscard => selectedForDiscard;
+        public int SelectedConsumableIndex => selectedConsumableIndex;
+        public OpenBoosterPackState OpenBoosterPack { get; private set; }
         public bool BossIntroActive { get; private set; }
+        public bool IsScoring { get; private set; }
+        public ScoreResult LastScoreResult => lastScoreResult;
 
         private void Awake()
         {
@@ -42,6 +48,7 @@ namespace DomiNox.Run
         {
             Run = new RunState { CurrentLevel = new LevelState() };
             Run.DomiNexInventory.SetActive(Array.Empty<DomiNexDefinition>());
+            selectedConsumableIndex = -1;
             dominexEffectEngine.ApplyRunStart(Run.DomiNexInventory, Run, null);
 
             lastScoreResult = new ScoreResult(0, 1, new System.Collections.Generic.List<string>(), new System.Collections.Generic.List<string> { "Choisis la prochaine table." });
@@ -51,7 +58,7 @@ namespace DomiNox.Run
 
         public void SelectDomino(DominoInstance domino)
         {
-            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive)
+            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive || IsScoring)
             {
                 return;
             }
@@ -96,7 +103,7 @@ namespace DomiNox.Run
         public void DiscardSelectedDominoes()
         {
             var level = Run.CurrentLevel;
-            if (Run.Phase != RunPhase.PlayingLevel)
+            if (Run.Phase != RunPhase.PlayingLevel || IsScoring)
             {
                 Notify("Le shop est ouvert.");
                 return;
@@ -138,10 +145,7 @@ namespace DomiNox.Run
                 level.Hand.AddDomino(domino);
             }
 
-            if (!(level.DiscardsUsed == 0 && dominexEffectEngine.HasActive(Run.DomiNexInventory, "main_stable")))
-            {
-                level.DiscardsRemaining--;
-            }
+            level.DiscardsRemaining--;
 
             level.DiscardsUsed++;
             selectedForDiscard.Clear();
@@ -151,7 +155,7 @@ namespace DomiNox.Run
 
         public void ToggleOrientation()
         {
-            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive)
+            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive || IsScoring)
             {
                 return;
             }
@@ -182,7 +186,7 @@ namespace DomiNox.Run
         public void TryPlaceSelected(int x, int y)
         {
             var level = Run.CurrentLevel;
-            if (Run.Phase != RunPhase.PlayingLevel)
+            if (Run.Phase != RunPhase.PlayingLevel || IsScoring)
             {
                 Notify("Le shop est ouvert.");
                 return;
@@ -226,7 +230,7 @@ namespace DomiNox.Run
         public bool CanPlaceSelected(int x, int y)
         {
             var level = Run.CurrentLevel;
-            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive || selectedDomino == null || level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || IsBannedByBoss(selectedDomino))
+            if (Run.Phase != RunPhase.PlayingLevel || BossIntroActive || IsScoring || selectedDomino == null || level.Grid.GetPlacedDominoes().Count >= level.MaxPlacedDominoes || IsBannedByBoss(selectedDomino))
             {
                 return false;
             }
@@ -241,10 +245,32 @@ namespace DomiNox.Run
             return scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext, level.Boss);
         }
 
+        public ScoringPreview CalculateCurrentScoringPreview()
+        {
+            var level = Run.CurrentLevel;
+            var disabledPatternIds = level.Boss?.Definition.RuleType == BossRuleType.DisablePatterns ? level.Boss.Definition.DisabledPatternIds : null;
+            var patterns = patternDetector.DetectPatternInfos(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, disabledPatternIds);
+            var valuePattern = patterns.FirstOrDefault(item => item.Category == PatternCategory.Value) ?? PatternCatalog.GetById(PatternNames.TileHighId);
+            var designPattern = patterns.FirstOrDefault(item => item.Category == PatternCategory.Design);
+            if (valuePattern != null && designPattern != null && PatternComboCatalog.TryGetCombo(valuePattern.Id, designPattern.Id, out var combo))
+            {
+                var valueLevel = Run.PatternLevels.GetLevel(valuePattern.Id);
+                var designLevel = Run.PatternLevels.GetLevel(designPattern.Id);
+                var valueBonus = PatternScalingService.GetScaledPatternBonus(valuePattern, valueLevel);
+                var designBonus = PatternScalingService.GetScaledPatternBonus(designPattern, designLevel);
+                return new ScoringPreview(combo.Id, combo.Name, 1, valueBonus.Count + designBonus.Count + combo.CountBonus, valueBonus.Mult + designBonus.Mult + combo.MultBonus, $"{valuePattern.Name} Lv. {valueLevel} + {designPattern.Name} Lv. {designLevel}", true);
+            }
+
+            var pattern = designPattern ?? valuePattern;
+            var levelValue = Run.PatternLevels.GetLevel(pattern.Id);
+            var bonus = PatternScalingService.GetScaledPatternBonus(pattern, levelValue);
+            return new ScoringPreview(pattern.Id, pattern.Name, levelValue, bonus.Count, bonus.Mult);
+        }
+
         public void ResetPlacements()
         {
             var level = Run.CurrentLevel;
-            if (Run.Phase != RunPhase.PlayingLevel)
+            if (Run.Phase != RunPhase.PlayingLevel || IsScoring)
             {
                 Notify("Le shop est ouvert.");
                 return;
@@ -276,7 +302,7 @@ namespace DomiNox.Run
         public void ValidateScore()
         {
             var level = Run.CurrentLevel;
-            if (Run.Phase != RunPhase.PlayingLevel)
+            if (Run.Phase != RunPhase.PlayingLevel || IsScoring)
             {
                 Notify("Le shop est ouvert.");
                 return;
@@ -288,20 +314,39 @@ namespace DomiNox.Run
             }
 
             var dominexContext = CreateScoringContext(level);
-            lastScoreResult = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext, level.Boss);
+            var score = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext, level.Boss);
+            lastScoreResult = score.WithPostScoringEffects(RollPostScoringDomiNexEffects(score));
+            IsScoring = true;
+            selectedDomino = null;
+            selectedForDiscard.Clear();
+            Notify("Scoring...");
+        }
+
+        public void CompleteScoringAnimation()
+        {
+            if (!IsScoring)
+            {
+                return;
+            }
+
+            var level = Run.CurrentLevel;
+            IsScoring = false;
             Run.PatternUsage.Record(lastScoreResult.DetectedPatterns);
+            var secretName = RevealSecretPatterns(lastScoreResult);
+            var secretMessage = string.IsNullOrWhiteSpace(secretName) ? string.Empty : $" Secret Pattern discovered: {secretName}.";
+            ApplyPostScoringDomiNexEffects(lastScoreResult);
             level.CurrentScore = lastScoreResult.FinalScore;
             level.IsWon = level.CurrentScore >= level.Quota;
             level.IsLost = !level.IsWon;
             if (level.IsWon)
             {
                 OpenLevelReward();
-                Notify("Niveau reussi. Cash out disponible.");
+                Notify($"Niveau reussi. Cash out disponible.{secretMessage}");
                 return;
             }
 
             Run.Phase = RunPhase.RunLost;
-            Notify("Score insuffisant.");
+            Notify($"Score insuffisant.{secretMessage}");
         }
 
         public void CashOutReward()
@@ -343,16 +388,133 @@ namespace DomiNox.Run
                 return;
             }
 
-            if (Run.Credits < offer.Price)
+            if (!ShopPurchaseService.TrySpend(offer.Price, Run, GetMinimumAllowedCredits()))
             {
                 Notify("Credits insuffisants.");
                 return;
             }
 
-            Run.Credits -= offer.Price;
             Run.DomiNexInventory.Add(offer.DomiNex);
             offer.MarkPurchased();
             Notify($"DomiNex achete: {offer.DomiNex.Name}.");
+        }
+
+        public void BuyBoosterPackOffer(int index)
+        {
+            if (Run.Phase != RunPhase.Shop || Run.CurrentShop == null || index < 0 || index >= Run.CurrentShop.BoosterPackOffers.Count)
+            {
+                return;
+            }
+
+            var offer = Run.CurrentShop.BoosterPackOffers[index];
+            if (offer.IsPurchased)
+            {
+                Notify("Offre deja achetee.");
+                return;
+            }
+
+            if (!Run.HasFreeConsumableSlot())
+            {
+                Notify("Consumable slots full.");
+                return;
+            }
+
+            var choices = GenerateBoosterPackChoices(offer.Pack);
+            if (choices.Count == 0)
+            {
+                Notify("No Gem Tiles available.");
+                return;
+            }
+
+            if (!ShopPurchaseService.TrySpend(offer.Pack.Price, Run, GetMinimumAllowedCredits()))
+            {
+                Notify("Credits insuffisants.");
+                return;
+            }
+
+            var freeSlots = GameConstants.MaxConsumableSlots - Run.ActiveConsumableCount;
+            OpenBoosterPack = new OpenBoosterPackState(offer.Pack, choices, System.Math.Min(offer.Pack.PickCount, freeSlots), index);
+            Notify($"{offer.Pack.Name}: choose {OpenBoosterPack.ActualPickCount}.");
+        }
+
+        public void ToggleBoosterPackChoice(int index)
+        {
+            if (OpenBoosterPack == null || index < 0 || index >= OpenBoosterPack.Choices.Count)
+            {
+                return;
+            }
+
+            if (!OpenBoosterPack.SelectedIndices.Remove(index) && OpenBoosterPack.SelectedIndices.Count < OpenBoosterPack.ActualPickCount)
+            {
+                OpenBoosterPack.SelectedIndices.Add(index);
+            }
+
+            Notify("Pack selection updated.");
+        }
+
+        public void ConfirmBoosterPackChoices()
+        {
+            if (OpenBoosterPack == null || OpenBoosterPack.SelectedIndices.Count != OpenBoosterPack.ActualPickCount)
+            {
+                return;
+            }
+
+            foreach (var index in OpenBoosterPack.SelectedIndices.OrderBy(index => index))
+            {
+                Run.Consumables.Add(OpenBoosterPack.Choices[index].Id, GameConstants.MaxConsumableSlots);
+            }
+
+            if (OpenBoosterPack.OfferIndex >= 0 && OpenBoosterPack.OfferIndex < Run.CurrentShop.BoosterPackOffers.Count)
+            {
+                Run.CurrentShop.BoosterPackOffers[OpenBoosterPack.OfferIndex].MarkPurchased();
+            }
+
+            var packName = OpenBoosterPack.Pack.Name;
+            OpenBoosterPack = null;
+            Notify($"{packName} resolved.");
+        }
+
+        private List<ConsumableDefinition> GenerateBoosterPackChoices(BoosterPackDefinition pack)
+        {
+            var pool = GemTileRegistry.GetAvailableGemTiles(Run).ToList();
+            var choices = new List<ConsumableDefinition>();
+            while (choices.Count < pack.OfferedCardCount && pool.Count > 0)
+            {
+                var selected = pool[random.Next(pool.Count)];
+                pool.Remove(selected);
+                choices.Add(selected);
+            }
+
+            return choices;
+        }
+
+        public void SelectConsumable(int index)
+        {
+            if (index < 0 || index >= Run.Consumables.Count)
+            {
+                selectedConsumableIndex = -1;
+            }
+            else
+            {
+                selectedConsumableIndex = selectedConsumableIndex == index ? -1 : index;
+            }
+
+            Notify(selectedConsumableIndex < 0 ? "Consumable deselectionne." : "Consumable selectionne.");
+        }
+
+        public void UseSelectedConsumable()
+        {
+            if (IsScoring || selectedConsumableIndex < 0)
+            {
+                return;
+            }
+
+            if (GemTileRegistry.UseConsumable(selectedConsumableIndex, Run, out var message))
+            {
+                selectedConsumableIndex = -1;
+            }
+
+            Notify(message);
         }
 
         public void ContinueAfterShop()
@@ -364,6 +526,24 @@ namespace DomiNox.Run
 
             OpenFloorProgress(Run.CurrentLevel.LevelIndex + 1);
             Notify($"Etage {Run.CurrentLevel.FloorIndex}: prochaine table disponible.");
+        }
+
+        public void RerollShop()
+        {
+            const int rerollPrice = 5;
+            if (Run.Phase != RunPhase.Shop)
+            {
+                return;
+            }
+
+            if (!ShopPurchaseService.TrySpend(rerollPrice, Run, GetMinimumAllowedCredits()))
+            {
+                Notify("Credits insuffisants pour reroll.");
+                return;
+            }
+
+            Run.CurrentShop = shopService.GenerateShop(Run.DomiNexInventory, Run.CurrentLevel.FloorIndex, Run);
+            Notify("Shop reroll.");
         }
 
         public void StartCurrentLevel()
@@ -391,7 +571,7 @@ namespace DomiNox.Run
 
         private void OpenShop()
         {
-            Run.CurrentShop = shopService.GenerateShop(Run.DomiNexInventory, Run.CurrentLevel.FloorIndex);
+            Run.CurrentShop = shopService.GenerateShop(Run.DomiNexInventory, Run.CurrentLevel.FloorIndex, Run);
             Run.CurrentReward = null;
             Run.Phase = RunPhase.Shop;
         }
@@ -400,14 +580,7 @@ namespace DomiNox.Run
         {
             var level = Run.CurrentLevel;
             var discardCredits = level.DiscardsRemaining * GameConstants.CreditsPerRemainingDiscard;
-            if (level.DiscardsRemaining == GameConstants.PhaseOneDiscards && dominexEffectEngine.HasActive(Run.DomiNexInventory, "main_econome_complexe"))
-            {
-                discardCredits += 3;
-            }
-
-            var interestCredits = dominexEffectEngine.HasActive(Run.DomiNexInventory, "banque_fermee")
-                ? 0
-                : System.Math.Min(GameConstants.MaxInterestCredits, Run.Credits / GameConstants.InterestCreditStep);
+            var interestCredits = Run.Credits <= 0 ? 0 : System.Math.Min(GameConstants.MaxInterestCredits, Run.Credits / GameConstants.InterestCreditStep);
             Run.CurrentReward = new LevelRewardState(GameConstants.LevelWinCredits, discardCredits, interestCredits);
             Run.Phase = RunPhase.LevelReward;
         }
@@ -436,6 +609,7 @@ namespace DomiNox.Run
             Run.Phase = RunPhase.FloorProgress;
             selectedDomino = null;
             selectedForDiscard.Clear();
+            selectedConsumableIndex = -1;
             BossIntroActive = false;
         }
 
@@ -463,6 +637,7 @@ namespace DomiNox.Run
             Run.Phase = RunPhase.PlayingLevel;
             selectedDomino = null;
             selectedForDiscard.Clear();
+            selectedConsumableIndex = -1;
             CurrentOrientation = DominoOrientation.HorizontalRight;
             BossIntroActive = bossDefinition != null;
 
@@ -480,11 +655,7 @@ namespace DomiNox.Run
 
         public int GetQuotaForLevel(int levelIndex)
         {
-            var baseQuota = GameConstants.PhaseOneQuota + ((levelIndex - 1) * GameConstants.LevelQuotaIncrease);
-            var levelInFloor = GetLevelInFloor(levelIndex);
-            return levelInFloor == GameConstants.LevelsPerFloor && Run?.CurrentFloorBoss != null
-                ? (int)System.Math.Ceiling(baseQuota * Run.CurrentFloorBoss.QuotaMultiplier)
-                : baseQuota;
+            return LevelQuotaService.GetQuotaForGlobalLevel(levelIndex);
         }
 
         public static int GetFloorIndex(int levelIndex)
@@ -546,7 +717,77 @@ namespace DomiNox.Run
 
         private DomiNexScoringContext CreateScoringContext(LevelState level)
         {
-            return new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.DiscardsRemaining, level.MaxPlacedDominoes, patternUsageCounts: Run.PatternUsage.Counts);
+            return new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.DiscardsRemaining, level.MaxPlacedDominoes, patternUsageCounts: Run.PatternUsage.Counts, patternLevels: Run.PatternLevels.Levels, activeDomiNexCount: Run.ActiveDomiNexCount, maxDomiNexSlots: Run.MaxDomiNexSlots, bagDoubleCount: CountDeckDoubles(level));
+        }
+
+        public int GetMinimumAllowedCredits()
+        {
+            return Run.DomiNexInventory.Contains("credit_dominex") ? -20 : 0;
+        }
+
+        private List<PostScoringEffectResult> RollPostScoringDomiNexEffects(ScoreResult score)
+        {
+            var results = new List<PostScoringEffectResult>();
+            if (Run.DomiNexInventory.Contains("space_dominex") && !string.IsNullOrWhiteSpace(score.ValuePatternId))
+            {
+                var triggered = ChanceUtils.RollChance(1, 4);
+                results.Add(new PostScoringEffectResult("space_dominex", "Space Dominex", triggered ? $"{score.ValuePatternName} level up" : "No level up", triggered, score.ValuePatternId));
+            }
+
+            if (Run.DomiNexInventory.Contains("gros_michel"))
+            {
+                var triggered = ChanceUtils.RollChance(1, 6);
+                results.Add(new PostScoringEffectResult("gros_michel", "Gros Michel", triggered ? "Destroyed" : "Survived", triggered));
+            }
+
+            return results;
+        }
+
+        private string RevealSecretPatterns(ScoreResult score)
+        {
+            if (score.DesignPatternId == PatternNames.ChristCrossId && Run.RevealedSecretPatterns.Add(PatternNames.ChristCrossId))
+            {
+                return PatternNames.ChristCross;
+            }
+
+            if (score.DesignPatternId == PatternNames.BigLoopId && Run.RevealedSecretPatterns.Add(PatternNames.BigLoopId))
+            {
+                return PatternNames.BigLoop;
+            }
+
+            return null;
+        }
+
+        private void ApplyPostScoringDomiNexEffects(ScoreResult score)
+        {
+            foreach (var effect in score.PostScoringEffects)
+            {
+                if (!effect.Triggered)
+                {
+                    continue;
+                }
+
+                if (effect.SourceId == "space_dominex")
+                {
+                    Run.PatternLevels.Increase(effect.PatternId);
+                }
+                else if (effect.SourceId == "gros_michel")
+                {
+                    Run.DomiNexInventory.Remove("gros_michel");
+                }
+            }
+        }
+
+        private int CountDeckDoubles(LevelState level)
+        {
+            var placed = level.Grid.GetPlacedDominoes().Select(item => item.Domino);
+            return Run.Bag.RemainingDominoes
+                .Concat(Run.Bag.DiscardedDominoes)
+                .Concat(level.Hand.Dominoes)
+                .Concat(placed)
+                .GroupBy(domino => domino.InstanceId)
+                .Select(group => group.First())
+                .Count(domino => domino.Definition.IsDouble);
         }
 
         private void Notify(string message)

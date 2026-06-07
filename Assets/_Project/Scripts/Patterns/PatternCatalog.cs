@@ -6,24 +6,23 @@ namespace DomiNox.Patterns
     {
         public static IReadOnlyList<PatternInfo> ValuePatterns { get; } = new[]
         {
-            new PatternInfo(PatternNames.TripleDouble, PatternCategory.Value, "Jouer 3 doubles ou plus.", "+80 Chips, +4 Mult.", 80, 4, 90, "D..", ".D.", "..D"),
-            new PatternInfo(PatternNames.BigStraight, PatternCategory.Value, "Jouer une suite connectee de 5 valeurs consecutives.", "+80 Chips, +5 Mult.", 80, 5, 80, "123", ".45", "..6"),
-            new PatternInfo(PatternNames.JackpotSeven, PatternCategory.Value, "Jouer au moins 3 dominos dont la somme vaut 7.", "+70 Chips, +4 Mult.", 70, 4, 70, "7.7", ".7.", "..."),
-            new PatternInfo(PatternNames.DoublePair, PatternCategory.Value, "Jouer 2 doubles dans la meme validation.", "+45 Chips, +2 Mult.", 45, 2, 60, "D.D", "...", "..."),
-            new PatternInfo(PatternNames.SameValue, PatternCategory.Value, "Jouer au moins 3 dominos qui contiennent la meme valeur.", "+40 Chips, +3 Mult.", 40, 3, 50, "4.4", ".4.", "..."),
-            new PatternInfo(PatternNames.SmallStraight, PatternCategory.Value, "Jouer une suite connectee de 3 valeurs consecutives.", "+35 Chips, +2 Mult.", 35, 2, 40, "123", "...", "..."),
-            new PatternInfo(PatternNames.DoublePlayed, PatternCategory.Value, "Jouer au moins 1 double.", "+25 Chips, +1 Mult.", 25, 1, 30, ".D.", "...", "..."),
-            new PatternInfo(PatternNames.PairLink, PatternCategory.Value, "Jouer au moins 2 dominos qui partagent une valeur.", "+20 Chips, +1 Mult.", 20, 1, 20, "2-2", "...", "..."),
-            new PatternInfo(PatternNames.LowRoll, PatternCategory.Value, "Tous les dominos joues ont une somme de 5 ou moins.", "+20 Chips, +4 Mult.", 20, 4, 15, "lo.", ".lo", "..."),
-            new PatternInfo(PatternNames.HighTile, PatternCategory.Value, "Pattern par defaut si aucun autre pattern de valeur n'est retenu.", "+10 Chips.", 10, 0, 0, ".H.", "...", "...")
+            new PatternInfo(PatternNames.JackpotSevenId, PatternNames.JackpotSeven, PatternCategory.Value, "Au moins 3 dominos joues ont une somme egale a 7.", "+50 Tile, +4 Mult.", 50, 4, 70, "7.7", ".7.", "..."),
+            new PatternInfo(PatternNames.LongTileStraightId, PatternNames.LongTileStraight, PatternCategory.Value, "5 dominos connectes forment une suite exacte.", "+60 Tile, +7 Mult.", 60, 7, 60, "12", "23", "34", "45", "56"),
+            new PatternInfo(PatternNames.SmallTileStraightId, PatternNames.SmallTileStraight, PatternCategory.Value, "3 dominos connectes forment une suite exacte.", "+30 Tile, +4 Mult.", 30, 4, 50, "12", "23", "34"),
+            new PatternInfo(PatternNames.TripleDoubleId, PatternNames.TripleDouble, PatternCategory.Value, "Au moins 3 doubles sont joues.", "+20 Tile, +3 Mult.", 20, 3, 40, "D..", ".D.", "..D"),
+            new PatternInfo(PatternNames.DoubleTileId, PatternNames.DoubleTile, PatternCategory.Value, "Au moins 2 doubles sont joues.", "+10 Tile, +3 Mult.", 10, 3, 30, "D.D", "...", "..."),
+            new PatternInfo(PatternNames.HighTileId, PatternNames.HighTile, PatternCategory.Value, "Tous les dominos joues ont une somme strictement superieure a 8.", "+6 Tile, +2 Mult.", 6, 2, 20, "hi.", ".hi", "..."),
+            new PatternInfo(PatternNames.LowTileId, PatternNames.LowTile, PatternCategory.Value, "Tous les dominos joues ont une somme inferieure ou egale a 5.", "+10 Tile, +2 Mult.", 10, 2, 10, "lo.", ".lo", "..."),
+            new PatternInfo(PatternNames.TileHighId, PatternNames.TileHigh, PatternCategory.Value, "Pattern par defaut si aucun autre pattern de valeur n'est reconnu.", "+5 Tile, +1 Mult.", 5, 1, 0, ".H.", "...", "...")
         };
 
         public static IReadOnlyList<PatternInfo> DesignPatterns { get; } = new[]
         {
-            new PatternInfo(PatternNames.Loop, PatternCategory.Design, "Les cases jouees forment une boucle fermee.", "+80 Chips, +5 Mult.", 80, 5, 80, "XXX", "X.X", "XXX"),
-            new PatternInfo(PatternNames.Snake, PatternCategory.Design, "La forme change de direction au moins 2 fois sans se couper.", "+25 Chips, +2 Mult.", 25, 2, 50, "XX.", ".XX", "XX."),
-            new PatternInfo(PatternNames.Corner, PatternCategory.Design, "La forme fait exactement un angle a 90 degres.", "+2 Mult.", 0, 2, 30, "X..", "X..", "XXX"),
-            new PatternInfo(PatternNames.Line, PatternCategory.Design, "Toutes les cases jouees forment une ligne horizontale ou verticale.", "+20 Chips.", 20, 0, 20, "XXX", "...", "...")
+            new PatternInfo(PatternNames.BigLoopId, PatternNames.BigLoop, PatternCategory.Design, "Grande boucle fermee et connectee formant un carre 4x4.", "+100 Tile, +6 Mult.", 100, 6, 100, 1, 0, true, "XXXX", "X..X", "X..X", "XXXX"),
+            new PatternInfo(PatternNames.TileLoopId, PatternNames.TileLoop, PatternCategory.Design, "Les dominos forment une boucle fermee avec connexions valides.", "+30 Tile, +3 Mult.", 30, 3, 80, "XXX", "X.X", "XXX"),
+            new PatternInfo(PatternNames.ChristCrossId, PatternNames.ChristCross, PatternCategory.Design, "Forme de croix prolongee avec un centre clair et une branche verticale etendue.", "+50 Tile, +4 Mult.", 50, 4, 60, 1, 0, true, "..X...", "..X...", "XXXX..", "..X...", "..X..."),
+            new PatternInfo(PatternNames.CrossTileId, PatternNames.CrossTile, PatternCategory.Design, "Au moins 4 dominos forment une vraie croix autour d'un centre clair.", "+10 Tile, +2 Mult.", 10, 2, 40, ".X.", "XXX", ".X."),
+            new PatternInfo(PatternNames.TileLineId, PatternNames.TileLine, PatternCategory.Design, "Au moins 3 dominos connectes sur une ligne horizontale ou verticale.", "+5 Tile, +2 Mult.", 5, 2, 20, "XXX", "...", "...")
         };
 
         public static IReadOnlyList<PatternInfo> BonusPatterns { get; } = new PatternInfo[0];
@@ -35,6 +34,19 @@ namespace DomiNox.Patterns
             foreach (var pattern in All)
             {
                 if (pattern.Name == name)
+                {
+                    return pattern;
+                }
+            }
+
+            return null;
+        }
+
+        public static PatternInfo GetById(string id)
+        {
+            foreach (var pattern in All)
+            {
+                if (pattern.Id == id)
                 {
                     return pattern;
                 }

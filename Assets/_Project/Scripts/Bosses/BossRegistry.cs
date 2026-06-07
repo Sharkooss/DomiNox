@@ -27,7 +27,7 @@ namespace DomiNox.Bosses
                 "Les doubles perdent leur pouvoir.",
                 1.15f,
                 BossRuleType.DisablePatterns,
-                disabledPatternIds: new[] { "double", "double_pair", "triple_double" }),
+                disabledPatternIds: new[] { "double_tile", "triple_double" }),
             new BossDefinition(
                 "slot_machine_777",
                 "La Machine 777",

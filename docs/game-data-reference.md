@@ -1,6 +1,6 @@
 # DomiNox Game Data Reference
 
-Ce fichier recense les valeurs éditables actuelles du prototype. À mettre à jour à chaque changement dans `GameConstants`, `DomiNexRegistry`, `PatternCatalog` ou le scoring.
+Ce fichier recense les valeurs editables actuelles du prototype. A mettre a jour a chaque changement dans `GameConstants`, `PatternCatalog`, `DomiNexRegistry` ou le scoring.
 
 ## Run / Level Values
 
@@ -11,10 +11,13 @@ Ce fichier recense les valeurs éditables actuelles du prototype. À mettre à j
 | Grid width | 6 | `GameConstants.GridWidth` |
 | Grid height | 6 | `GameConstants.GridHeight` |
 | Starting hand size | 7 | `GameConstants.StartingHandSize` |
-| Starting quota | 80 | `GameConstants.PhaseOneQuota` |
-| Quota increase per level | 40 | `GameConstants.LevelQuotaIncrease` |
+| Levels per floor | 5 | `GameConstants.LevelsPerFloor` |
+| Classic levels per floor | 4 | `GameConstants.ClassicLevelsPerFloor` |
+| Quota source | table + fallback | `LevelQuotaService` |
 | Starting credits | 10 | `GameConstants.StartingCredits` |
-| Max DomiNex slots | 5 | `GameConstants.StartingDomiNexSlots` |
+| Starting DomiNex slots | 5 | `GameConstants.StartingDomiNexSlots` |
+| Max consumable slots | 2 | `GameConstants.MaxConsumableSlots` |
+| Max pattern level | 5 | `GameConstants.MaxPatternLevel` |
 | Max placed dominoes | 5 | `GameConstants.PhaseOneMaxPlacedDominoes` |
 | Discards | 3 | `GameConstants.PhaseOneDiscards` |
 | Win credits | 5 | `GameConstants.LevelWinCredits` |
@@ -24,146 +27,295 @@ Ce fichier recense les valeurs éditables actuelles du prototype. À mettre à j
 
 ## Core Round Rules
 
-Chaque niveau commence avec une main de 7 dominos, une limite de 5 dominos posables et 3 discards disponibles. Il n'y a plus d'action points et il n'y a pas de bouton Draw. Le joueur peut defausser pour remplacer des dominos, poser jusqu'a la limite, puis valider une seule fois pour gagner ou perdre le niveau.
+Chaque niveau commence avec une main de 7 dominos, une limite de 5 dominos posables et 3 discards disponibles. Il n'y a pas d'action points et pas de bouton Draw. Le joueur peut defausser pour remplacer des dominos, poser jusqu'a la limite, puis valider une seule fois pour gagner ou perdre le niveau.
 
-Le joueur commence avec 5 slots de DomiNex actifs. La limite est stockee dans `RunState.MaxDomiNexSlots` et appliquee au moment de l'achat, pas seulement dans l'UI.
+Le joueur commence avec 5 slots de DomiNex actifs. La limite est stockee dans `RunState.MaxDomiNexSlots` et appliquee au modele au moment de l'achat.
+
+Le joueur peut stocker 2 consommables Gem Tiles. Les Gem Tiles ne prennent pas de slot DomiNex et s'utilisent manuellement depuis la barre haute.
+
+## Quotas
+
+Les quotas sont centralises dans `LevelQuotaService`. Chaque etage contient 4 niveaux classiques et 1 boss, donc `levelInFloor == 5` correspond toujours au boss.
+
+| Etage | Table 1 | Table 2 | Table 3 | Table 4 | Boss |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 300 | 450 | 600 | 750 | 1200 |
+| 2 | 2000 | 3000 | 4000 | 5000 | 7500 |
+| 3 | 12000 | 18000 | 26000 | 36000 | 55000 |
+
+Pour les etages non definis, le fallback prend le quota equivalent de l'etage precedent, multiplie par `2.2` pour les tables classiques et `2.3` pour les boss, puis arrondit a une valeur lisible.
+
+Regles d'arrondi:
+
+| Range | Step |
+| --- | ---: |
+| Sous 10000 | 100 |
+| De 10000 a 100000 | 1000 |
+| Au-dessus de 100000 | 5000 |
 
 ## Scoring Formula
 
-`Final Score = Count x Mult`
+`Final Score = ceil(Count x Mult x FinalScoreMultiplier)`
 
-Current flow:
+Flow actuel:
 
-1. Base Count = sum of played domino values.
+1. Base Count = somme des valeurs des dominos joues.
 2. Base Mult = 1.
-3. Add the best value pattern bonus.
-4. Add the best design pattern bonus if detected.
-5. Apply active DomiNex scoring effects.
+3. Detection du meilleur Value Pattern par priorite, avec `Tile High` en fallback.
+4. Detection du meilleur Design Pattern par priorite si disponible.
+5. Application des bonus de patterns avec scaling de niveau.
+6. Application des DomiNex additifs.
+7. Application des DomiNex multiplicatifs.
 
-Après une validation, chaque pattern détecté est enregistré dans `RunState.PatternUsage`. Les compteurs sont propres à la run et repartent à zéro au démarrage d'une nouvelle run. Exemple: une validation qui détecte `Double` et `Loop` ajoute +1 à chacun de ces deux compteurs.
+Apres validation, chaque pattern detecte est enregistre dans `RunState.PatternUsage`. Les compteurs sont propres a la run et repartent a zero au demarrage d'une nouvelle run.
+
+## Pattern Levels
+
+Les niveaux de patterns sont stockes dans `RunState.PatternLevels` et consultes via `DomiNexScoringContext.PatternLevels`.
+
+Scaling centralise dans `PatternScalingService`:
+
+| Valeur | Formule |
+| --- | --- |
+| Scaled Count | `round(BaseCount * (1 + 0.55 * (level - 1)))` |
+| Scaled Mult | `BaseMult + floor((level - 1) * 1.25)` |
+
+`Space Dominex` a 1 chance sur 4 d'augmenter de 1 le niveau du Value Pattern principal joue apres validation.
 
 ## Value Patterns
 
-| Pattern | Requirement | Count Bonus | Mult Bonus | Priority |
-| --- | --- | ---: | ---: | ---: |
-| Triple double | Jouer 3 doubles ou plus. | 80 | 4 | 90 |
-| Big Straight | Jouer une suite connectée de 5 valeurs consécutives. | 80 | 5 | 80 |
-| Jackpot 7 | Jouer au moins 3 dominos dont la somme vaut 7. | 70 | 4 | 70 |
-| Double Pair | Jouer 2 doubles dans la même validation. | 45 | 2 | 60 |
-| Same Value | Jouer au moins 3 dominos qui contiennent la même valeur. | 40 | 3 | 50 |
-| Small Straight | Jouer une suite connectée de 3 valeurs consécutives. | 35 | 2 | 40 |
-| Double | Jouer au moins 1 double. | 25 | 1 | 30 |
-| Pair Link | Jouer au moins 2 dominos qui partagent une valeur. | 20 | 1 | 20 |
-| Low Roll | Tous les dominos joués ont une somme de 5 ou moins. | 20 | 4 | 15 |
-| High Tile | Pattern par défaut si aucun autre pattern de valeur n'est retenu. | 10 | 0 | 0 |
+| Id | Pattern | Requirement | Count | Mult | Priority |
+| --- | --- | --- | ---: | ---: | ---: |
+| `tile_high` | Tile High | Fallback si aucun autre Value Pattern n'est reconnu. | 5 | 1 | 0 |
+| `low_tile` | Low Tile | Tous les dominos joues ont une somme <= 5. | 10 | 2 | 10 |
+| `high_tile` | High Tile | Tous les dominos joues ont une somme > 8. | 6 | 2 | 20 |
+| `double_tile` | Double Tile | Au moins 2 doubles sont joues. | 10 | 3 | 30 |
+| `triple_double` | Triple double | Au moins 3 doubles sont joues. | 20 | 3 | 40 |
+| `small_tile_straight` | Small Tile Straight | 3 dominos connectes forment une suite exacte. | 30 | 4 | 50 |
+| `long_tile_straight` | Long Tile Straight | 5 dominos connectes forment une suite exacte. | 60 | 7 | 60 |
+| `jackpot_7` | Jackpot 7 | Au moins 3 dominos joues ont une somme egale a 7. | 50 | 4 | 70 |
 
 ## Design Patterns
 
-| Pattern | Type | Requirement | Count Bonus | Mult Bonus | Priority |
+| Id | Pattern | Requirement | Count | Mult | Priority |
 | --- | --- | --- | ---: | ---: | ---: |
-| Loop | Design | Les cases jouées forment une boucle fermée. | 80 | 5 | 80 |
-| Snake | Design | La forme change de direction au moins 2 fois sans se couper. | 25 | 2 | 50 |
-| Corner | Design | La forme fait exactement un angle à 90 degrés. | 0 | 2 | 30 |
-| Line | Design | Toutes les cases jouées forment une ligne horizontale ou verticale. | 20 | 0 | 20 |
+| `big_loop` | Big Loop | Grande boucle fermee et connectee formant un carre 4x4. | 100 | 6 | 100 |
+| `tile_line` | Tile Line | Au moins 3 dominos connectes sur une ligne horizontale ou verticale. | 5 | 2 | 20 |
+| `cross_tile` | Cross Tile | Au moins 4 dominos forment une vraie croix autour d'un centre clair. | 10 | 2 | 40 |
+| `tile_loop` | Tile Loop | Les dominos forment une boucle fermee avec connexions valides. | 30 | 3 | 80 |
 
-`Nox Hand` a ete retire temporairement: poser toute la limite etait trop simple et rendait le bonus automatique.
+Design detection est stricte et basee sur les connexions valides entre dominos, pas sur la simple proximite visuelle.
+
+Priorite de detection:
+
+1. `big_loop`
+2. `tile_loop`
+3. `christ_cross`
+4. `cross_tile`
+5. `tile_line`
+
+`Big Loop` est un Design Pattern secret. Il est reconnu quand une loop valide forme strictement le contour d'une bounding box 4x4, avec interieur vide. Il donne `+100 Tile, +6 Mult`, priorite 100, et reste cache tant qu'il n'a pas ete joue une premiere fois pendant la run.
+
+`Tile Loop` est reconnu quand les dominos forment un cycle ferme valide d'au moins 4 dominos. Chaque domino de la boucle doit avoir exactement deux voisins utiles dans le graphe de connexions valides. Une connexion visuelle dont les valeurs ne correspondent pas ne compte pas.
+
+`Cross Tile` est reconnu seulement s'il existe un domino central connecte dans au moins 3 directions distinctes parmi haut, bas, gauche, droite. Une ligne, un angle, une boucle ou une forme compacte sans centre clair ne peut pas etre `Cross Tile`.
+
+`Christ Cross` est un Design Pattern secret. Il est reconnu quand une vraie `Cross Tile` possede un axe vertical dominant: depuis le centre, il faut une branche gauche, une branche droite, une connexion verticale en haut et/ou en bas totalisant au moins 2 dominos, et l'axe vertical en comptant le centre doit etre plus long que l'axe horizontal. Une ligne verticale seule ne peut jamais etre `Christ Cross`. Il donne `+50 Tile, +4 Mult`, priorite 60, et reste cache dans Run Info tant qu'il n'a pas ete joue une premiere fois pendant la run.
+
+| Id | Pattern | Secret | Requirement | Count | Mult | Priority |
+| --- | --- | --- | --- | ---: | ---: | ---: |
+| `big_loop` | Big Loop | Yes | Grande boucle fermee et connectee formant un carre 4x4. | 100 | 6 | 100 |
+| `christ_cross` | Christ Cross | Yes | Croix prolongee avec centre clair et branche verticale etendue. | 50 | 4 | 60 |
+
+Tests de non-regression couverts en EditMode:
+
+1. Une boucle valide detecte `tile_loop`, jamais `cross_tile`.
+2. Une boucle avec connexion invalide ne detecte pas `tile_loop`.
+3. Une croix minimale detecte `cross_tile`.
+4. Une ligne et une forme en L ne detectent pas `cross_tile`.
+5. Une croix verticalement prolongee detecte `christ_cross`.
+
+## Pattern Combos
+
+Les combos sont centralises dans `PatternComboCatalog`. Quand le scoring detecte a la fois un Value Pattern et un Design Pattern, le catalogue cherche une combinaison exacte via `TryGetCombo(valuePatternId, designPatternId, out combo)`.
+
+Le combo ne remplace pas les patterns: il ajoute un bonus fixe supplementaire apres les bonus Value et Design scales.
+
+Formule preview combo:
+
+`Combo Count = ScaledValuePatternCount + ScaledDesignPatternCount + ComboCountBonus`
+
+`Combo Mult = ScaledValuePatternMult + ScaledDesignPatternMult + ComboMultBonus`
+
+Pendant l'animation de scoring, l'ordre est: Value Pattern, Design Pattern, Pattern Combo, dominos, boss, DomiNex additifs, DomiNex multiplicatifs, score final, effets post-scoring.
+
+| Combo | Value Pattern | Design Pattern | Bonus Tile | Bonus Mult | Difficulte |
+| --- | --- | --- | ---: | ---: | --- |
+| High Line | `tile_high` | `tile_line` | 10 | 1 | Easy |
+| Low Line | `low_tile` | `tile_line` | 20 | 2 | Easy |
+| High Roll Line | `high_tile` | `tile_line` | 25 | 2 | Easy |
+| Double Line | `double_tile` | `tile_line` | 35 | 3 | Medium |
+| Triple Line | `triple_double` | `tile_line` | 60 | 4 | Medium |
+| Small Straight Line | `small_tile_straight` | `tile_line` | 50 | 4 | Medium |
+| Long Straight Line | `long_tile_straight` | `tile_line` | 100 | 6 | Hard |
+| Jackpot Line | `jackpot_7` | `tile_line` | 80 | 5 | Medium |
+| High Cross | `tile_high` | `cross_tile` | 25 | 2 | Medium |
+| Low Cross | `low_tile` | `cross_tile` | 40 | 3 | Medium |
+| High Roll Cross | `high_tile` | `cross_tile` | 45 | 3 | Medium |
+| Double Cross | `double_tile` | `cross_tile` | 70 | 5 | Hard |
+| Triple Cross | `triple_double` | `cross_tile` | 110 | 7 | Hard |
+| Small Straight Cross | `small_tile_straight` | `cross_tile` | 90 | 6 | Hard |
+| Long Straight Cross | `long_tile_straight` | `cross_tile` | 160 | 9 | VeryHard |
+| Jackpot Cross | `jackpot_7` | `cross_tile` | 130 | 8 | Hard |
+| High Loop | `tile_high` | `tile_loop` | 50 | 4 | Hard |
+| Low Loop | `low_tile` | `tile_loop` | 70 | 5 | Hard |
+| High Roll Loop | `high_tile` | `tile_loop` | 80 | 5 | Hard |
+| Double Loop | `double_tile` | `tile_loop` | 120 | 8 | VeryHard |
+| Triple Loop | `triple_double` | `tile_loop` | 180 | 11 | VeryHard |
+| Small Straight Loop | `small_tile_straight` | `tile_loop` | 150 | 9 | VeryHard |
+| Long Straight Loop | `long_tile_straight` | `tile_loop` | 250 | 14 | Legendary |
+| Jackpot Loop | `jackpot_7` | `tile_loop` | 220 | 12 | Legendary |
+| High Christ Cross | `tile_high` | `christ_cross` | 60 | 5 | Hard |
+| Low Christ Cross | `low_tile` | `christ_cross` | 85 | 6 | Hard |
+| High Roll Christ Cross | `high_tile` | `christ_cross` | 95 | 6 | Hard |
+| Double Christ Cross | `double_tile` | `christ_cross` | 130 | 9 | VeryHard |
+| Triple Christ Cross | `triple_double` | `christ_cross` | 190 | 12 | VeryHard |
+| Small Straight Christ Cross | `small_tile_straight` | `christ_cross` | 160 | 10 | VeryHard |
+| Long Straight Christ Cross | `long_tile_straight` | `christ_cross` | 280 | 16 | Legendary |
+| Jackpot Christ Cross | `jackpot_7` | `christ_cross` | 250 | 15 | Legendary |
+| High Big Loop | `tile_high` | `big_loop` | 120 | 8 | VeryHard |
+| Low Big Loop | `low_tile` | `big_loop` | 150 | 9 | VeryHard |
+| High Roll Big Loop | `high_tile` | `big_loop` | 170 | 9 | VeryHard |
+| Double Big Loop | `double_tile` | `big_loop` | 220 | 12 | Legendary |
+| Triple Big Loop | `triple_double` | `big_loop` | 300 | 16 | Legendary |
+| Small Straight Big Loop | `small_tile_straight` | `big_loop` | 260 | 14 | Legendary |
+| Long Straight Big Loop | `long_tile_straight` | `big_loop` | 420 | 22 | Mythic |
+| Jackpot Big Loop | `jackpot_7` | `big_loop` | 380 | 20 | Mythic |
+
+Le lookup des combos utilise strictement la paire exacte `ValuePatternId + DesignPatternId`. Il n'existe aucun fallback de `christ_cross` vers `cross_tile`; si le design detecte est `christ_cross`, le combo ne peut jamais etre `High Cross`, `Low Cross` ou `Jackpot Cross`.
+
+## Run Info UI
+
+Le bouton `Run Info` dans le panneau gauche ouvre la popup des patterns. Les onglets Value et Design affichent le niveau actuel de chaque pattern via `RunState.PatternLevels`. Les niveaux commencent a 1 et se mettent a jour a la prochaine ouverture de la popup, notamment apres un level-up de `Space Dominex` ou une Gem Tile.
+
+Run Info n'affiche pas les valeurs base du catalogue si un pattern est niveau 2 ou plus. Pour chaque pattern visible, l'UI recalcule `+Tile, +Mult` avec `PatternScalingService.GetScaledPatternBonus(pattern, currentLevel)`.
+
+L'onglet `Combos` affiche les 24 combos, leur difficulte et leurs bonus fixes. Le bloc pattern du panneau gauche affiche le combo detecte en priorite si une combinaison existe, sinon les patterns detectes normalement.
+
+Le sac de la colonne droite est un indicateur compact `Sac` + compteur. La tooltip boss est positionnee pres du label boss et clamp dans l'ecran.
 
 ## Bosses Demo
 
-Les boss apparaissent tous les 5 niveaux. Le boss actif est choisi aleatoirement dans `BossRegistry.DemoBosses`, en evitant de reprendre le meme boss deux fois de suite quand c'est possible.
+Les boss apparaissent tous les 5 niveaux. Le boss d'etage est choisi a l'avance pour etre visible dans `FloorProgressView`, en evitant de reprendre le meme boss deux fois de suite quand possible.
 
-| Boss | Rule Type | Effet | Quota |
-| --- | --- | --- | ---: |
-| Le Croupier Manchot | BannedValue | Une valeur entre 0 et 6 est bannie. Les dominos contenant cette valeur ne peuvent pas être posés. | x1.25 |
-| La Table Rouge | ModifyDiscards | Le niveau commence avec 1 discard en moins. | x1.20 |
-| La Veuve des Doubles | DisablePatterns | Les patterns `Double`, `Double Pair` et `Triple double` ne donnent aucun bonus. | x1.15 |
-| La Machine 777 | JackpotBoost | Chaque domino de somme 7 donne +7 Count et +1 Mult. `Jackpot 7` donne x1.25 score final. | x1.50 |
-| Le Sabot Verrouillé | LockHandDominoes | 2 dominos de la main de départ sont verrouillés et ne peuvent pas être défaussés. | x1.20 |
-
-## Boss Rules Notes
-
-| Rule | Notes |
-| --- | --- |
-| BannedValue | La valeur bannie est tirée au début du niveau boss. Les dominos concernés sont grisés et affichent `Valeur bannie` si le joueur essaie de les jouer. |
-| ModifyDiscards | Modifie `DiscardsRemaining` au début du niveau. Le cash out utilise les discards réellement restants. |
-| DisablePatterns | Le scoring retire les patterns désactivés avant de choisir le meilleur pattern de valeur. |
-| JackpotBoost | Appliqué pendant le scoring boss après les patterns et avant les DomiNex. |
-| LockHandDominoes | Les dominos verrouillés sont choisis après la main de départ. Ils peuvent être posés mais pas défaussés. |
+| Boss | Rule Type | Effet |
+| --- | --- | --- |
+| Le Croupier Manchot | BannedValue | Une valeur entre 0 et 6 est bannie. Les dominos contenant cette valeur ne peuvent pas etre poses. |
+| La Table Rouge | ModifyDiscards | Le niveau commence avec 1 discard en moins. |
+| La Veuve des Doubles | DisablePatterns | Les patterns `double_tile` et `triple_double` ne donnent aucun bonus. |
+| La Machine 777 | JackpotBoost | Chaque domino de somme 7 donne +7 Count et +1 Mult. `jackpot_7` donne x1.25 score final. |
+| Le Sabot Verrouille | LockHandDominoes | 2 dominos de la main de depart sont verrouilles et ne peuvent pas etre defausses. |
 
 ## DomiNex
 
-| Id | Name | Rarity | Tags | Current Effect |
-| --- | --- | --- | --- | --- |
-| main_stable | Main Stable | Common | discard, comfort | Première défausse de chaque niveau gratuite. |
-| petit_profit | Petit Profit | Common | credits, discard | Futur: +1 crédit si niveau fini avec au moins 1 discard restant. |
-| double_simple | Double Simple | Common | double, mult | +1 Mult par double joué. |
-| compteur_bleu | Compteur Bleu | Common | count, placed | Si au moins 4 dominos posés, +15 Count. |
-| jeton_de_table | Jeton de Table | Common | credits | Futur: +1 crédit après chaque niveau réussi. |
-| fond_de_sac | Fond de Sac | Common | draw, mult | Futur: dernier domino pioché donne +3 Mult s'il est joué. |
-| petite_mise | Petite Mise | Common | low, mult | Dominos de somme <= 4 donnent +1 Mult. |
-| gros_jeton | Gros Jeton | Common | high, count | Dominos de somme >= 10 donnent +5 Count. |
-| main_propre | Main Propre | Common | discard, mult | Si aucune défausse pendant le niveau, +2 Mult. |
-| dernier_coup | Dernier Coup | Common | count, order | Le dernier domino joué donne +10 Count. |
-| premiere_pose | Premiere Pose | Common | mult, order | Le premier domino joué donne +1 Mult. |
-| suite_facile | Suite Facile | Common | pattern, mult | Futur: suites courtes donnent +2 Mult supplémentaire. |
-| economie_mineure | Economie Mineure | Common | economy | Futur: intérêts commencent à 8 crédits au lieu de 10. |
-| domino_poli | Domino Poli | Common | gold, count | Futur: dominos dorés donnent +1 Count supplémentaire. |
-| reroll_leger | Reroll Leger | Common | discard, comfort | Futur: première défausse de chaque niveau ne consomme pas de discard. |
-| poche_secrete | Poche Secrete | Common | hand | Futur: +1 taille de main au premier niveau de chaque étage. |
-| chaine_courte | Chaine Courte | Common | mult, placed | Si exactement 3 dominos joués, +3 Mult. |
-| coup_sur | Coup Sur | Common | credits, precision | Futur: dépassement quota < 20% donne +1 crédit. |
-| double_ou_rien | Double ou Rien | Rare | double, risk | +2 Mult par double. Futur: malus quota si aucun double. |
-| banque_noire | Banque Noire | Rare | credits, mult | +1 Mult par tranche de 10 crédits possédés. |
-| tapis_bleu | Tapis Bleu | Rare | blue, discard | Futur: premier domino bleu joué rend 1 discard, une fois par niveau. |
-| full_nox_rare | Full Nox | Rare | full, mult | Temporairement désactivé: bonus trop automatique avec la limite de pose. |
-| jackpot_7_rare | Jackpot 7 | Rare | seven, mult, credits | Dominos de somme 7 donnent +1 Mult. Futur: 3 joués donne +4 crédits. |
-| limite_souple | Limite Souple | Rare | limit, count | +1 domino jouable, -5 Count par domino joué. |
-| main_serree | Main Serree | Rare | limit, mult | -1 domino jouable, +4 Mult. |
-| marchandage | Marchandage | Rare | shop, economy | Futur: shops coûtent 1 crédit de moins, minimum 1. |
-| casino_bleu | Casino Bleu | Rare | blue, count, mult | Futur: dominos bleus donnent +5 Count et +1 Mult. |
-| casino_rouge | Casino Rouge | Rare | red, risk | Futur: dominos rouges donnent +12 Count, coût si niveau raté. |
-| mise_verte | Mise Verte | Rare | green, credits | Futur: dominos verts donnent +1 crédit si niveau gagné. |
-| relance_vip | Relance VIP | Rare | draw, comfort | Futur: relance toute la main pour 0 action une fois par niveau. |
-| valeur_fetiche | Valeur Fetiche | Rare | value, mult | Futur: valeur choisie au niveau donne +2 Mult. |
-| combo_tardif | Combo Tardif | Rare | discard, mult | Futur: validation après au moins 1 discard donne +8 Mult. |
-| plan_de_table | Plan de Table | Rare | pattern, planning | Si un design pattern est detecte, +2 Mult. |
-| dernier_discard | Dernier Discard | Rare | discard, risk, mult | Si validation avec 0 discard restant, +6 Mult. |
-| main_econome_complexe | Main Econome | Rare | discard, credits | Si niveau gagne avec tous les discards restants, +3 credits au cash out. |
-| sept_porte_bonheur | Sept Porte-Bonheur | Rare | seven, jackpot, mult | Premier domino somme 7: +5 Count et +2 Mult. Jackpot 7: +3 Mult. |
-| petite_machine | Petite Machine | Rare | low, mult, combo | Somme <= 3: +1 Mult par domino. Si 4 dominos somme <= 5: +20 Count. |
-| haute_pression | Haute Pression | Rare | high, count, risk | Somme >= 10: +8 Count par domino. Si aucun, -1 Mult. |
-| architecte_du_casino | Architecte du Casino | Epic | pattern, mult | Futur: suites longues et équilibre donnent deux fois plus de Mult. |
-| sac_dore | Sac Dore | Epic | gold, credits | Futur: dominos dorés donnent +2 crédits au lieu de +1. |
-| limite_brisee | Limite Brisee | Epic | limit, discard | +1 domino jouable. Futur: -1 discard. |
-| haute_mise_epic | Haute Mise | Epic | high, count, mult | Dominos de somme >= 10 donnent +4 Count et +1 Mult. |
-| petite_fortune | Petite Fortune | Epic | low, mult | Dominos de somme <= 4 donnent +2 Mult. |
-| jackpot_instable | Jackpot Instable | Epic | seven, risk | Futur: jackpot donne x1.5 score final, prochain shop +20%. |
-| oeil_du_croupier | Oeil du Croupier | Epic | draw, planning | Futur: voir les 3 prochains dominos du sac. |
-| domino_fantome | Domino Fantome | Epic | copy, limit | Futur: premier domino copié en fantôme hors limite. |
-| chasseur_de_boucle | Chasseur de Boucle | Epic | loop, design, mult | Si `Loop` est detecte, +50 Count et +3 Mult. |
-| banque_fermee | Banque Fermee | Epic | economy, mult, risk | +1 Mult par tranche de 8 credits. Interets cash out desactives. |
-| tout_ou_rien | Tout ou Rien | Epic | limit, risk, scoring | Si limite de pose exacte, score final x1.2. Sinon -2 Mult. |
-| contre_boss | Contre-Boss | Epic | boss, adaptive | Pendant un niveau boss: +25 Count et +3 Mult. |
-| copie_conforme | Copie Conforme | Epic | copy, first, scoring | Le premier domino ajoute une deuxieme fois son Count de base. |
-| roi_du_jackpot | Roi du Jackpot | Legendary | seven, legendary | Futur: tous les effets Jackpot sont doublés. |
-| casino_infini | Casino Infini | Legendary | credits, endgame | Futur: continuer après quota pour crédits bonus. |
-| banquier_royal | Banquier Royal | Legendary | economy, legendary | Futur: intérêts sans plafond. |
-| rituel_nox | Rituel Nox | Legendary | legendary, pattern, scoring | Si un pattern de valeur et un pattern de design sont detectes, score final x1.5. |
-| dette_rouge | Dette Rouge | Cursed | credits, cursed | +30 crédits au run start. Futur: shops +20% jusqu'au boss. |
-| main_brulee | Main Brulee | Cursed | mult, cursed | +15 Mult. Futur: -2 taille de main. |
+| Id | Name | Rarity | Current Effect |
+| --- | --- | --- | --- |
+| `dominex` | Dominex | Common | +4 Mult. |
+| `low_dominex` | Low Dominex | Common | Si tous les dominos joues ont une somme <= 5, +8 Mult. |
+| `silly_dominex` | Silly Dominex | Common | Si tous les dominos joues ont une somme <= 5, +50 Tile. |
+| `high_dominex` | High Dominex | Common | Si tous les dominos joues ont une somme > 8, +6 Mult. |
+| `willy_dominex` | Willy Dominex | Common | Si tous les dominos joues ont une somme > 8, +40 Tile. |
+| `twin_dominex` | Twin Dominex | Common | Si au moins 2 doubles sont joues, +10 Mult. |
+| `niwt_dominex` | Niwt Dominex | Common | Si au moins 2 doubles sont joues, +80 Tile. |
+| `triplet_dominex` | Triplet Dominex | Common | Si au moins 3 doubles sont joues, +12 Mult. |
+| `telprit_dominex` | Telprit Dominex | Common | Si au moins 3 doubles sont joues, +100 Tile. |
+| `straight_dominex` | Straight Dominex | Common | Si Small Tile Straight est joue, +70 Tile. |
+| `long_straight_dominex` | Long Straight Dominex | Common | Si Long Tile Straight est joue, +20 Mult. |
+| `jacko_7even_dominex` | Jack'o 7even Dominex | Common | Chaque domino joue de somme 7 donne +30 Tile et +3 Mult. |
+| `line_dominex` | Line Dominex | Common | Si Tile Line est joue, +60 Tile. |
+| `cross_dominex` | Cross Dominex | Common | Si Cross Tile est joue, +80 Tile. Si la croix est prolongee, +10 Mult par extension. |
+| `looping_dominex` | Looping Dominex | Common | Si Tile Loop est joue, +100 Tile. |
+| `looper_dominex` | Looper Dominex | Common | Si Tile Loop est joue, +12 Mult. |
+| `half_dominex` | Half Dominex | Common | Si 3 dominos ou moins sont places, +20 Mult. |
+| `reroll_dominex` | Reroll | Common | Le premier reroll de chaque shop est gratuit. Hook futur. |
+| `mystic` | Mystic | Common | Si tu valides avec 0 discard restant, +15 Mult. |
+| `shallow` | Shallow | Common | +5 Mult par discard restant. |
+| `credit_dominex` | Credit Dominex | Common | Tu peux acheter si l'achat te laisse a -20 credits ou plus. |
+| `gros_michel` | Gros Michel | Common | +15 Mult. Apres chaque main jouee, 1 chance sur 6 de detruire ce DomiNex. |
+| `even_dominex` | Even Dominex | Common | Chaque domino joue contenant uniquement des valeurs paires donne +4 Mult. |
+| `odd_dominex` | Odd Dominex | Common | Chaque domino joue contenant uniquement des valeurs impaires donne +30 Tile. |
+| `scholar` | Scholar | Common | Chaque domino joue contenant un 0 donne +20 Tile et +4 Mult. |
+| `fibonacci` | Fibonacci | Rare | Chaque domino joue contenant 1, 3 ou 5 donne +5 Mult. |
+| `empty_dominex` | Empty Dominex | Rare | Mult x nombre de slots DomiNex libres. |
+| `doublish` | Doublish | Rare | Score final x1 + 0.2 par double dans ton sac. |
+| `space_dominex` | Space Dominex | Rare | 1 chance sur 4 d'ameliorer le niveau du Value Pattern joue de +1. |
+
+## Consumables / Gem Tiles
+
+Les Gem Tiles sont des consommables separes des DomiNex. Elles sont centralisees dans `GemTileRegistry`, stockees dans `RunState.Consumables`, et utilisent `PatternLevelState` pour augmenter le niveau du pattern cible de +1.
+
+Regles:
+
+1. Pas de rarete.
+2. Maximum 2 consommables stockes.
+3. Utilisation manuelle via le bouton `Use` dans la barre haute.
+4. Une Gem Tile utilisee est retiree de l'inventaire.
+5. Un pattern ne peut pas depasser `GameConstants.MaxPatternLevel` (5).
+6. Une Gem Tile dont le pattern cible est deja niveau max n'est plus proposee par le shop.
+7. Les achats respectent `Credit Dominex`: sans lui credits >= prix, avec lui credits - prix >= -20.
+
+| Id | Name | Target Pattern | Price | Effect |
+| --- | --- | --- | ---: | --- |
+| `quartz_tile` | Quartz Tile | `tile_high` | 3 | Upgrade Tile High by 1 level. |
+| `sapphire_tile` | Sapphire Tile | `low_tile` | 4 | Upgrade Low Tile by 1 level. |
+| `ruby_tile` | Ruby Tile | `high_tile` | 4 | Upgrade High Tile by 1 level. |
+| `opal_tile` | Opal Tile | `double_tile` | 5 | Upgrade Double Tile by 1 level. |
+| `amethyst_tile` | Amethyst Tile | `triple_double` | 6 | Upgrade Triple Double by 1 level. |
+| `topaz_tile` | Topaz Tile | `small_tile_straight` | 5 | Upgrade Small Tile Straight by 1 level. |
+| `emerald_tile` | Emerald Tile | `long_tile_straight` | 8 | Upgrade Long Tile Straight by 1 level. |
+| `diamond_tile` | Diamond Tile | `jackpot_7` | 7 | Upgrade Jackpot 7 by 1 level. |
+| `onyx_tile` | Onyx Tile | `tile_line` | 4 | Upgrade Tile Line by 1 level. |
+| `jade_tile` | Jade Tile | `cross_tile` | 6 | Upgrade Cross Tile by 1 level. |
+| `obsidian_tile` | Obsidian Tile | `tile_loop` | 8 | Upgrade Tile Loop by 1 level. |
+| `garnet_tile` | Garnet Tile | `christ_cross` | 9 | Upgrade Christ Cross by 1 level. |
+| `lapis_tile` | Lapis Tile | `big_loop` | 10 | Upgrade Big Loop by 1 level. |
+
+`Garnet Tile` est secrete: elle n'apparait pas dans le shop tant que `christ_cross` n'a pas ete revele pendant la run. Apres revelation, elle suit les memes regles que les autres Gem Tiles et disparait si `Christ Cross` est au niveau max.
+
+`Lapis Tile` est secrete: elle n'apparait pas dans le shop tant que `big_loop` n'a pas ete revele pendant la run. Apres revelation, elle suit les memes regles que les autres Gem Tiles et disparait si `Big Loop` est au niveau max.
+
+## Visibility / Dev Mode
+
+La visibilite des contenus secrets est centralisee dans `CollectableVisibilityService`.
+
+Regles:
+
+1. `DevMode.Enabled == true`: patterns, combos, consommables et collectables sont visibles meme s'ils sont secrets ou non reveles.
+2. Dev mode inactif: un pattern secret est visible seulement s'il est dans `RunState.RevealedSecretPatterns`.
+3. Dev mode inactif: un combo utilisant un Design Pattern secret est visible seulement si ce Design Pattern est revele.
+4. Dev mode inactif: une Gem Tile ciblant un pattern secret est visible/proposable seulement si ce pattern est revele.
+
+La Collection possede un onglet `Consumables` listant les Gem Tiles visibles. Run Info et Shop utilisent la meme logique de visibilite.
+
+Preview visuelle:
+
+1. `Christ Cross` utilise un diagramme large 6x5 pour afficher sa croix prolongee sans rognage.
+2. `Big Loop` utilise un diagramme de contour 4x4 distinct de `Tile Loop`.
 
 ## Shop Notes
 
-Le shop actuel génère 3 offres DomiNex pondérées par rareté et exclut les DomiNex déjà possédés. Les DomiNex maudits ne sont pas dans le pool normal pour l'instant. Le shop prototype exclut aussi les DomiNex sans effet actuel et les DomiNex temporairement désactivés.
+Le shop actuel genere 3 offres DomiNex ponderees par rarete et exclut les DomiNex deja possedes. Il genere aussi 2 offres Gem Tiles sans rarete, sans doublon dans le meme shop, et exclut les Gem Tiles dont le pattern cible est niveau max.
 
 Les achats de DomiNex sont bloques quand `ActiveDomiNexCount >= MaxDomiNexSlots`. Le shop affiche `DomiNex X/5`; un achat refuse ne retire aucun credit.
 
-Temporarily disabled: `domino_poli`, `tapis_bleu`, `casino_bleu`, `casino_rouge`, `mise_verte`, `sac_dore`, `full_nox_rare`, `limite_brisee`.
+Les achats de Gem Tiles sont bloques quand `ActiveConsumableCount >= MaxConsumableSlots`. Le shop affiche les Gem Tiles avec leur pattern cible, `Lv.X -> Lv.Y`, et le prix. Le slot `Future Slot` est volontairement non interactif.
+
+`Credit Dominex` abaisse seulement la limite d'achat a `-20` credits. Les interets de cash out valent 0 si les credits sont negatifs.
 
 ## Reward / Cash Out
 
 | Reward Line | Formula |
 | --- | --- |
-| Niveau gagné | `LevelWinCredits` |
+| Niveau gagne | `LevelWinCredits` |
 | Discards restants | `DiscardsRemaining x CreditsPerRemainingDiscard` |
-| Intérêts | `min(MaxInterestCredits, Credits / InterestCreditStep)` |
+| Interets | `credits <= 0 ? 0 : min(MaxInterestCredits, Credits / InterestCreditStep)` |

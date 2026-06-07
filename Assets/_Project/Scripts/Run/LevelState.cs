@@ -9,7 +9,7 @@ namespace DomiNox.Run
     {
         public int FloorIndex { get; set; } = 1;
         public int LevelIndex { get; set; } = 1;
-        public int Quota { get; set; } = GameConstants.PhaseOneQuota;
+        public int Quota { get; set; } = LevelQuotaService.GetQuota(1, 1);
         public int CurrentScore { get; set; }
         public int DiscardsRemaining { get; set; } = GameConstants.PhaseOneDiscards;
         public int DiscardsUsed { get; set; }

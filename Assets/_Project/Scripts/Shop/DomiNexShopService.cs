@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using DomiNox.Dominex;
+using DomiNox.Consumables;
+using DomiNox.Run;
 
 namespace DomiNox.Shop
 {
@@ -11,6 +13,11 @@ namespace DomiNox.Shop
         private readonly Random random = new Random();
 
         public ShopState GenerateShop(DomiNexInventory inventory, int floorIndex)
+        {
+            return GenerateShop(inventory, floorIndex, null);
+        }
+
+        public ShopState GenerateShop(DomiNexInventory inventory, int floorIndex, RunState run)
         {
             var shop = new ShopState();
             var candidates = DomiNexRegistry.All
@@ -23,10 +30,23 @@ namespace DomiNox.Shop
             {
                 var selected = PickWeighted(candidates, floorIndex);
                 candidates.Remove(selected);
-                shop.Offers.Add(new ShopOffer(selected, GetPrice(selected.Rarity)));
+                shop.Offers.Add(new ShopOffer(selected, DomiNexPriceService.GeneratePrice(selected.Rarity, random)));
             }
 
+            AddBoosterPackOffers(shop);
+
             return shop;
+        }
+
+        private void AddBoosterPackOffers(ShopState shop)
+        {
+            var firstPool = BoosterPackRegistry.All.Where(pack => pack.Type == BoosterPackType.Normal || pack.Type == BoosterPackType.Jumbo).ToList();
+            var secondPool = BoosterPackRegistry.All.Where(pack => pack.Type == BoosterPackType.Jumbo || pack.Type == BoosterPackType.Mega).ToList();
+            var first = firstPool[random.Next(firstPool.Count)];
+            var secondCandidates = secondPool.Where(pack => pack.Id != first.Id).ToList();
+            var second = secondCandidates.Count == 0 ? secondPool[random.Next(secondPool.Count)] : secondCandidates[random.Next(secondCandidates.Count)];
+            shop.BoosterPackOffers.Add(new BoosterPackShopOffer(first));
+            shop.BoosterPackOffers.Add(new BoosterPackShopOffer(second));
         }
 
         public int GetPrice(DomiNexRarity rarity)

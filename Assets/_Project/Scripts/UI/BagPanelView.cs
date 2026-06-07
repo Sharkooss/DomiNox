@@ -31,15 +31,15 @@ namespace DomiNox.UI
             button.onClick.AddListener(ToggleOverlay);
 
             var layout = gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(8, 8, 8, 8);
-            layout.spacing = 4f;
+            layout.padding = new RectOffset(6, 6, 4, 4);
+            layout.spacing = 0f;
             layout.childAlignment = TextAnchor.MiddleCenter;
 
-            var title = UiFactory.CreateText(transform, "Title", "Sac", 16, TextAnchor.MiddleCenter);
+            var title = UiFactory.CreateText(transform, "Title", "Sac", 12, TextAnchor.MiddleCenter);
             title.color = new Color(0.98f, 0.84f, 0.34f);
-            var icon = UiFactory.CreateText(transform, "Icon", "[::]", 22, TextAnchor.MiddleCenter);
+            var icon = UiFactory.CreateText(transform, "Icon", "[::]", 10, TextAnchor.MiddleCenter);
             icon.color = new Color(0.68f, 0.76f, 0.86f);
-            countText = UiFactory.CreateText(transform, "Count", string.Empty, 14, TextAnchor.MiddleCenter);
+            countText = UiFactory.CreateText(transform, "Count", string.Empty, 12, TextAnchor.MiddleCenter);
 
             BuildOverlay();
         }

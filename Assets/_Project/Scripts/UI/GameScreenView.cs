@@ -1,3 +1,4 @@
+using System.Collections;
 using DomiNox.Run;
 using DomiNox.Scoring;
 using DomiNox.Utilities;
@@ -26,6 +27,7 @@ namespace DomiNox.UI
         private LayoutElement shopLayout;
         private Text feedback;
         private Text utilityInfo;
+        private FloatingTextService floatingText;
         private GameObject centerGameplayPanel;
         private GameObject gridPanel;
         private GameObject handPanel;
@@ -33,11 +35,12 @@ namespace DomiNox.UI
         private GameObject modalOverlayRoot;
         private Vector2 lastPointerPosition;
         private bool hasPointerPreview;
+        private bool scoringAnimationRunning;
         private DominoView activeDragView;
 
         private void Start()
         {
-            controller = FindObjectOfType<GameFlowController>();
+            controller = FindAnyObjectByType<GameFlowController>();
             controller.StateChanged += Render;
             BuildLayout();
             Render(controller.Run, new ScoreResult(0, 1, new System.Collections.Generic.List<string>(), new System.Collections.Generic.List<string>()), "Pret.");
@@ -53,7 +56,7 @@ namespace DomiNox.UI
 
         private void Update()
         {
-            if (controller.Run.Phase != RunPhase.PlayingLevel || controller.BossIntroActive)
+            if (controller.Run.Phase != RunPhase.PlayingLevel || controller.BossIntroActive || controller.IsScoring)
             {
                 return;
             }
@@ -80,6 +83,10 @@ namespace DomiNox.UI
             var canvas = new GameObject("Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
             UiFactory.ConfigureCanvasScaler(canvas.GetComponent<CanvasScaler>());
+
+            floatingText = new GameObject("FloatingTextService").AddComponent<FloatingTextService>();
+            floatingText.transform.SetParent(canvas.transform, false);
+            floatingText.Initialize(canvas.GetComponent<Canvas>());
 
             var root = new GameObject("RootHUD", typeof(RectTransform), typeof(HorizontalLayoutGroup));
             root.transform.SetParent(canvas.transform, false);
@@ -112,8 +119,8 @@ namespace DomiNox.UI
 
             dominexBar = new GameObject("TopDominexPanel", typeof(RectTransform), typeof(LayoutElement)).AddComponent<DomiNexBarView>();
             dominexBar.transform.SetParent(centerGameplayPanel.transform, false);
-            dominexBar.GetComponent<LayoutElement>().preferredHeight = 66f;
-            dominexBar.Initialize();
+            dominexBar.GetComponent<LayoutElement>().preferredHeight = 88f;
+            dominexBar.Initialize(controller);
 
             floorProgressView = new GameObject("FloorProgressView", typeof(RectTransform), typeof(LayoutElement)).AddComponent<FloorProgressView>();
             floorProgressView.transform.SetParent(centerGameplayPanel.transform, false);
@@ -210,8 +217,8 @@ namespace DomiNox.UI
             bagPanel = new GameObject("BagPanel", typeof(RectTransform), typeof(LayoutElement)).AddComponent<BagPanelView>();
             bagPanel.transform.SetParent(rightUtilityPanel.transform, false);
             var bagLayout = bagPanel.GetComponent<LayoutElement>();
-            bagLayout.preferredWidth = 150f;
-            bagLayout.preferredHeight = 118f;
+            bagLayout.preferredWidth = 92f;
+            bagLayout.preferredHeight = 54f;
             bagPanel.Initialize(controller);
         }
 
@@ -236,7 +243,8 @@ namespace DomiNox.UI
             levelRewardView.gameObject.SetActive(isReward);
             runLostView.gameObject.SetActive(isLost);
 
-            scorePanel.Render(run, score);
+            var preview = isPlaying && !controller.IsScoring ? controller.CalculateCurrentScoringPreview() : null;
+            scorePanel.Render(run, score, preview, controller.IsScoring);
             bagPanel.Render(run);
             bossIntroView.Render(run);
             if (isFloorProgress)
@@ -272,6 +280,11 @@ namespace DomiNox.UI
 
             shopView.Render(run);
             dominexBar.Render(run);
+            if (isPlaying && controller.IsScoring && !scoringAnimationRunning)
+            {
+                StartCoroutine(AnimateScoring(controller.LastScoreResult));
+            }
+
             feedback.gameObject.SetActive(isPlaying || isShop || isFloorProgress);
             feedback.text = message;
             if (!isShop && hasPointerPreview)
@@ -309,7 +322,7 @@ namespace DomiNox.UI
 
         private bool SetActiveDragView(DominoView dominoView)
         {
-            if (controller.SelectedDomino == null || controller.BossIntroActive)
+            if (controller.SelectedDomino == null || controller.BossIntroActive || controller.IsScoring)
             {
                 return false;
             }
@@ -382,10 +395,115 @@ namespace DomiNox.UI
 
         private static void EnsureEventSystem()
         {
-            if (FindObjectOfType<EventSystem>() == null)
+            if (FindAnyObjectByType<EventSystem>() == null)
             {
                 new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
             }
+        }
+
+        private IEnumerator AnimateScoring(ScoreResult result)
+        {
+            scoringAnimationRunning = true;
+            hasPointerPreview = false;
+            activeDragView?.ForceClearDragGhost();
+            activeDragView = null;
+
+            var currentCount = 0;
+            var currentMult = 1;
+            var finalMultiplier = 1f;
+            scorePanel.RenderScoringState("Scoring\nReady", currentCount, currentMult, finalMultiplier, detail: "Tile: 0\nMult: 1");
+            yield return new WaitForSeconds(0.18f);
+
+            foreach (var step in result.Steps)
+            {
+                if (step.Type == ScoringStepType.Reset)
+                {
+                    currentCount = 0;
+                    currentMult = 1;
+                    finalMultiplier = 1f;
+                    scorePanel.RenderScoringState("Scoring\nStart", currentCount, currentMult, finalMultiplier, detail: "Tile: 0\nMult: 1");
+                    yield return new WaitForSeconds(0.15f);
+                    continue;
+                }
+
+                if (step.Type == ScoringStepType.FinalScore)
+                {
+                    scorePanel.RenderScoringState("Final Score", currentCount, currentMult, finalMultiplier, result.FinalScore, $"Final Score = {result.FinalScore}\nQuota: {controller.Run.CurrentLevel.Quota}");
+                    floatingText.Spawn(result.FinalScore.ToString(), scorePanel.GetPatternAnchor(), FloatingTextType.Multiplier);
+                    yield return new WaitForSeconds(0.55f);
+                    continue;
+                }
+
+                var anchor = GetStepAnchor(step);
+                yield return Pulse(anchor);
+                if (step.CountDelta != 0)
+                {
+                    currentCount += step.CountDelta;
+                    floatingText.Spawn($"{step.CountDelta:+#;-#;0}", anchor, step.FloatingTextType);
+                }
+
+                if (step.MultDelta != 0)
+                {
+                    currentMult += step.MultDelta;
+                    floatingText.Spawn($"{step.MultDelta:+#;-#;0}", anchor, step.FloatingTextType);
+                }
+
+                if (step.Type == ScoringStepType.DomiNexMultiplier && step.MultiplierValue != 0f)
+                {
+                    finalMultiplier *= step.MultiplierValue;
+                    floatingText.Spawn($"x{step.MultiplierValue:0.##}", anchor, FloatingTextType.Multiplier);
+                }
+
+                scorePanel.RenderScoringState($"Scoring\n{step.SourceName}", currentCount, currentMult, finalMultiplier, detail: $"{step.SourceName}\n{step.Description}\n\nTile: {currentCount}\nMult: {currentMult}");
+                yield return new WaitForSeconds(0.32f);
+            }
+
+            foreach (var effect in result.PostScoringEffects)
+            {
+                var anchor = dominexBar.GetDomiNexRect(effect.SourceId) ?? scorePanel.GetPatternAnchor();
+                yield return Pulse(anchor);
+                floatingText.Spawn(effect.Description, anchor, effect.Triggered ? FloatingTextType.Multiplier : FloatingTextType.Warning);
+                yield return new WaitForSeconds(0.45f);
+            }
+
+            scoringAnimationRunning = false;
+            controller.CompleteScoringAnimation();
+        }
+
+        private RectTransform GetStepAnchor(ScoringStep step)
+        {
+            if (step.Domino != null)
+            {
+                return gridView.GetDominoRect(step.Domino) ?? scorePanel.GetPatternAnchor();
+            }
+
+            if (step.Type == ScoringStepType.DomiNexCount || step.Type == ScoringStepType.DomiNexMult || step.Type == ScoringStepType.DomiNexMultiplier)
+            {
+                return dominexBar.GetDomiNexRect(step.SourceId) ?? scorePanel.GetPatternAnchor();
+            }
+
+            return scorePanel.GetPatternAnchor();
+        }
+
+        private static IEnumerator Pulse(RectTransform rect)
+        {
+            if (rect == null)
+            {
+                yield break;
+            }
+
+            var start = rect.localScale;
+            const float duration = 0.16f;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                rect.localScale = start * Mathf.Lerp(1f, 1.08f, Mathf.Sin(t * Mathf.PI));
+                yield return null;
+            }
+
+            rect.localScale = start;
         }
     }
 }

@@ -1,4 +1,5 @@
 using DomiNox.Dominex;
+using DomiNox.Run;
 using DomiNox.Utilities;
 using UnityEngine;
 using UnityEngine.UI;
@@ -50,6 +51,11 @@ namespace DomiNox.UI
 
         public void Render(DomiNexDefinition definition, string emptyText = "Survole un DomiNex")
         {
+            Render(definition, null, emptyText);
+        }
+
+        public void Render(DomiNexDefinition definition, RunState run, string emptyText = "Survole un DomiNex")
+        {
             if (definition == null)
             {
                 nameText.text = emptyText;
@@ -65,7 +71,8 @@ namespace DomiNox.UI
             nameText.text = definition.Name;
             rarityText.text = definition.Rarity.ToString().ToUpperInvariant();
             rarityBackground.color = rarityColor;
-            descriptionText.text = definition.Description;
+            var dynamicText = definition.GetCurrentEffectText(run);
+            descriptionText.text = string.IsNullOrWhiteSpace(dynamicText) ? definition.Description : $"{definition.Description}\n{dynamicText}";
             tagsText.text = definition.Tags.Count == 0 ? string.Empty : string.Join("  •  ", definition.Tags);
             outline.effectColor = rarityColor;
         }

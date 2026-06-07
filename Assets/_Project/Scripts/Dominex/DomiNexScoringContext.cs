@@ -13,9 +13,13 @@ namespace DomiNox.Dominex
         public int MaxPlacedDominoes { get; }
         public IReadOnlyList<PatternInfo> DetectedPatterns { get; }
         public IReadOnlyDictionary<string, int> PatternUsageCounts { get; }
+        public IReadOnlyDictionary<string, int> PatternLevels { get; }
+        public int ActiveDomiNexCount { get; }
+        public int MaxDomiNexSlots { get; }
+        public int BagDoubleCount { get; }
         public BossLevelState Boss { get; }
 
-        public DomiNexScoringContext(IReadOnlyList<DomiNexDefinition> activeDomiNex, int credits, int discardsUsed, int discardsRemaining, int maxPlacedDominoes, IReadOnlyList<PatternInfo> detectedPatterns = null, BossLevelState boss = null, IReadOnlyDictionary<string, int> patternUsageCounts = null)
+        public DomiNexScoringContext(IReadOnlyList<DomiNexDefinition> activeDomiNex, int credits, int discardsUsed, int discardsRemaining, int maxPlacedDominoes, IReadOnlyList<PatternInfo> detectedPatterns = null, BossLevelState boss = null, IReadOnlyDictionary<string, int> patternUsageCounts = null, IReadOnlyDictionary<string, int> patternLevels = null, int activeDomiNexCount = 0, int maxDomiNexSlots = 0, int bagDoubleCount = 0)
         {
             ActiveDomiNex = activeDomiNex;
             Credits = credits;
@@ -24,12 +28,21 @@ namespace DomiNox.Dominex
             MaxPlacedDominoes = maxPlacedDominoes;
             DetectedPatterns = detectedPatterns ?? new List<PatternInfo>();
             PatternUsageCounts = patternUsageCounts ?? new Dictionary<string, int>();
+            PatternLevels = patternLevels ?? new Dictionary<string, int>();
+            ActiveDomiNexCount = activeDomiNexCount;
+            MaxDomiNexSlots = maxDomiNexSlots;
+            BagDoubleCount = bagDoubleCount;
             Boss = boss;
         }
 
         public DomiNexScoringContext WithDetectedPatterns(IReadOnlyList<PatternInfo> detectedPatterns, BossLevelState boss)
         {
-            return new DomiNexScoringContext(ActiveDomiNex, Credits, DiscardsUsed, DiscardsRemaining, MaxPlacedDominoes, detectedPatterns, boss, PatternUsageCounts);
+            return new DomiNexScoringContext(ActiveDomiNex, Credits, DiscardsUsed, DiscardsRemaining, MaxPlacedDominoes, detectedPatterns, boss, PatternUsageCounts, PatternLevels, ActiveDomiNexCount, MaxDomiNexSlots, BagDoubleCount);
+        }
+
+        public int GetPatternLevel(string patternId)
+        {
+            return !string.IsNullOrWhiteSpace(patternId) && PatternLevels.TryGetValue(patternId, out var level) ? level : 1;
         }
     }
 }
