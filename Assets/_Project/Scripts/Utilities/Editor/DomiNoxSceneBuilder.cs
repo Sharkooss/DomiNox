@@ -1,4 +1,6 @@
 #if UNITY_EDITOR
+using System;
+using System.IO;
 using DomiNox.Run;
 using DomiNox.UI;
 using UnityEditor;
@@ -6,6 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 
 namespace DomiNox.Utilities.Editor
 {
@@ -29,21 +32,69 @@ namespace DomiNox.Utilities.Editor
 
         private static void BuildMainMenu()
         {
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            new GameObject("Main Camera", typeof(Camera));
-            new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
-            new GameObject("MainMenuView", typeof(MainMenuView));
-            EditorSceneManager.SaveScene(scene, MainMenuPath);
+            var scene = OpenOrCreateScene(MainMenuPath);
+            var changed = false;
+            changed |= EnsureRootObject<Camera>("Main Camera");
+            changed |= EnsureRootObject<EventSystem>("EventSystem", typeof(InputSystemUIInputModule));
+            changed |= EnsureRootObject<MainMenuView>("MainMenuView");
+            if (changed)
+            {
+                EditorSceneManager.SaveScene(scene, MainMenuPath);
+            }
         }
 
         private static void BuildGame()
         {
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            new GameObject("Main Camera", typeof(Camera));
-            new GameObject("EventSystem", typeof(EventSystem), typeof(InputSystemUIInputModule));
-            new GameObject("GameFlowController", typeof(GameFlowController));
-            new GameObject("GameScreenView", typeof(GameScreenView));
-            EditorSceneManager.SaveScene(scene, GamePath);
+            var scene = OpenOrCreateScene(GamePath);
+            var changed = false;
+            changed |= EnsureRootObject<Camera>("Main Camera");
+            changed |= EnsureRootObject<EventSystem>("EventSystem", typeof(InputSystemUIInputModule));
+            changed |= EnsureRootObject<GameFlowController>("GameFlowController");
+            changed |= EnsureRootObject<GameScreenView>("GameScreenView");
+            if (changed)
+            {
+                EditorSceneManager.SaveScene(scene, GamePath);
+            }
+        }
+
+        private static Scene OpenOrCreateScene(string path)
+        {
+            return File.Exists(path)
+                ? EditorSceneManager.OpenScene(path, OpenSceneMode.Single)
+                : EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+        }
+
+        private static bool EnsureRootObject<T>(string name, params Type[] extraComponentTypes) where T : Component
+        {
+            var root = GameObject.Find(name);
+            if (root == null)
+            {
+                var componentTypes = new Type[extraComponentTypes.Length + 1];
+                componentTypes[0] = typeof(T);
+                Array.Copy(extraComponentTypes, 0, componentTypes, 1, extraComponentTypes.Length);
+                new GameObject(name, componentTypes);
+                return true;
+            }
+
+            var changed = false;
+            if (root.GetComponent<T>() == null)
+            {
+                root.AddComponent<T>();
+                changed = true;
+            }
+
+            foreach (var componentType in extraComponentTypes)
+            {
+                if (root.GetComponent(componentType) != null)
+                {
+                    continue;
+                }
+
+                root.AddComponent(componentType);
+                changed = true;
+            }
+
+            return changed;
         }
     }
 }
