@@ -33,7 +33,7 @@ namespace DomiNox.Consumables
         public static IReadOnlyList<ConsumableDefinition> GetAvailableGemTiles(RunState run)
         {
             return All
-                .Where(definition => CollectableVisibilityService.IsConsumableVisible(definition, run))
+                .Where(definition => CollectableVisibilityService.CanGemTileAppearInPack(definition, run))
                 .Where(definition => !run.PatternLevels.IsMaxLevel(definition.TargetPatternId))
                 .ToList();
         }

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DomiNox.Dominoes;
 
 namespace DomiNox.Scoring
 {
@@ -10,6 +11,7 @@ namespace DomiNox.Scoring
         public List<string> DetectedPatterns { get; }
         public List<string> BreakdownLines { get; }
         public List<ScoringStep> Steps { get; }
+        public List<DominoModifierEffectResult> DominoModifierEffects { get; }
         public List<PostScoringEffectResult> PostScoringEffects { get; }
         public string ValuePatternId { get; }
         public string ValuePatternName { get; }
@@ -28,7 +30,7 @@ namespace DomiNox.Scoring
         {
         }
 
-        public ScoreResult(int count, int mult, int finalScore, List<string> detectedPatterns, List<string> breakdownLines, string valuePatternId = null, string valuePatternName = null, int valuePatternLevel = 1, string designPatternId = null, string designPatternName = null, int designPatternLevel = 1, List<ScoringStep> steps = null, List<PostScoringEffectResult> postScoringEffects = null, PatternComboResult patternCombo = null)
+        public ScoreResult(int count, int mult, int finalScore, List<string> detectedPatterns, List<string> breakdownLines, string valuePatternId = null, string valuePatternName = null, int valuePatternLevel = 1, string designPatternId = null, string designPatternName = null, int designPatternLevel = 1, List<ScoringStep> steps = null, List<PostScoringEffectResult> postScoringEffects = null, PatternComboResult patternCombo = null, List<DominoModifierEffectResult> dominoModifierEffects = null)
         {
             Count = count;
             Mult = mult;
@@ -42,13 +44,14 @@ namespace DomiNox.Scoring
             DesignPatternName = designPatternName;
             DesignPatternLevel = designPatternLevel;
             Steps = steps ?? new List<ScoringStep>();
+            DominoModifierEffects = dominoModifierEffects ?? new List<DominoModifierEffectResult>();
             PostScoringEffects = postScoringEffects ?? new List<PostScoringEffectResult>();
             PatternCombo = patternCombo;
         }
 
         public ScoreResult WithPostScoringEffects(List<PostScoringEffectResult> postScoringEffects)
         {
-            return new ScoreResult(Count, Mult, FinalScore, DetectedPatterns, BreakdownLines, ValuePatternId, ValuePatternName, ValuePatternLevel, DesignPatternId, DesignPatternName, DesignPatternLevel, Steps, postScoringEffects, PatternCombo);
+            return new ScoreResult(Count, Mult, FinalScore, DetectedPatterns, BreakdownLines, ValuePatternId, ValuePatternName, ValuePatternLevel, DesignPatternId, DesignPatternName, DesignPatternLevel, Steps, postScoringEffects, PatternCombo, DominoModifierEffects);
         }
     }
 }

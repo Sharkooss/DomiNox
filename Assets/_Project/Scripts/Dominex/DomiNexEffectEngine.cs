@@ -48,15 +48,7 @@ namespace DomiNox.Dominex
 
             foreach (var dominex in context.ActiveDomiNex)
             {
-                foreach (var effect in dominex.Effects.Where(effect => effect.Trigger == DomiNexTrigger.Scoring && !IsMultiplicative(effect.Type)))
-                {
-                    ApplyScoringEffect(dominex, effect, placedDominoes, context, ref count, ref mult, ref finalScoreMultiplier, breakdown, steps, ref order);
-                }
-            }
-
-            foreach (var dominex in context.ActiveDomiNex)
-            {
-                foreach (var effect in dominex.Effects.Where(effect => effect.Trigger == DomiNexTrigger.Scoring && IsMultiplicative(effect.Type)))
+                foreach (var effect in dominex.Effects.Where(effect => effect.Trigger == DomiNexTrigger.Scoring).OrderBy(effect => IsMultiplicative(effect.Type) ? 1 : 0))
                 {
                     ApplyScoringEffect(dominex, effect, placedDominoes, context, ref count, ref mult, ref finalScoreMultiplier, breakdown, steps, ref order);
                 }

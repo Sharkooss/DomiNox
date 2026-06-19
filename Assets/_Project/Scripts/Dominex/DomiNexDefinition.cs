@@ -52,7 +52,9 @@ namespace DomiNox.Dominex
         {
             var placed = run.CurrentLevel?.Grid.GetPlacedDominoes().Select(item => item.Domino) ?? Enumerable.Empty<DominoInstance>();
             var hand = run.CurrentLevel?.Hand.Dominoes ?? Enumerable.Empty<DominoInstance>();
-            return run.Bag.RemainingDominoes.Concat(run.Bag.DiscardedDominoes).Concat(hand).Concat(placed).GroupBy(domino => domino.InstanceId).Select(group => group.First()).Count(domino => domino.Definition.IsDouble);
+            var playedThisLevel = run.CurrentLevel?.PlayedThisLevel ?? Enumerable.Empty<DominoInstance>();
+            var discardedThisLevel = run.CurrentLevel?.DiscardedThisLevel ?? Enumerable.Empty<DominoInstance>();
+            return run.Bag.RemainingDominoes.Concat(run.Bag.DiscardedDominoes).Concat(hand).Concat(placed).Concat(playedThisLevel).Concat(discardedThisLevel).GroupBy(domino => domino.InstanceId).Select(group => group.First()).Count(domino => domino.Definition.IsDouble);
         }
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DomiNox.Core;
 using DomiNox.Patterns;
 using DomiNox.Run;
 using DomiNox.Scoring;
@@ -18,9 +19,11 @@ namespace DomiNox.UI
         private Text roundScore;
         private Text countValue;
         private Text multValue;
+        private Text handsValue;
         private Text discardsValue;
         private Text creditsValue;
         private Text placedValue;
+        private Text bagValue;
         private Text bossValue;
         private GameObject bossTooltip;
         private Text bossTooltipText;
@@ -29,9 +32,12 @@ namespace DomiNox.UI
         private Button valuePatternsTab;
         private Button designPatternsTab;
         private Button combosTab;
+        private Button floorTab;
         private GameObject valuePatternsPage;
         private GameObject designPatternsPage;
         private GameObject combosPage;
+        private GameObject floorPage;
+        private Transform floorContent;
         private readonly Dictionary<string, Text> patternLevelLabels = new Dictionary<string, Text>();
         private readonly Dictionary<string, Text> patternEffectLabels = new Dictionary<string, Text>();
         private readonly Dictionary<string, GameObject> secretPatternRows = new Dictionary<string, GameObject>();
@@ -69,10 +75,12 @@ namespace DomiNox.UI
             multiply.GetComponent<LayoutElement>().preferredWidth = 16f;
             multValue = CreateFormulaPill(formula.transform, "Mult", new Color(1f, 0.25f, 0.22f));
 
-            var resources = CreateSection("ResourceSection", 144f, new Color(0.08f, 0.1f, 0.13f));
+            var resources = CreateSection("ResourceSection", 190f, new Color(0.08f, 0.1f, 0.13f));
+            handsValue = CreateMetric(resources, "Hands", "Hands");
             discardsValue = CreateMetric(resources, "Discards", "Discards");
             creditsValue = CreateMetric(resources, "Credits", "Credits");
             placedValue = CreateMetric(resources, "Placed", "Placed");
+            bagValue = CreateMetric(resources, "Bag", "Bag");
             bossValue = CreateMetric(resources, "Boss", "Boss");
             BuildBossTooltip();
 
@@ -103,14 +111,16 @@ namespace DomiNox.UI
             {
                 RefreshPatternLevels();
             }
-            var placed = level.Grid.GetPlacedDominoes().Count;
+            var placedDominoes = level.Grid.GetPlacedDominoes();
+            var placed = GameFlowController.CountPlacedAgainstLimit(level);
+            var lightPlaced = placedDominoes.Count - placed;
 
             blindTitle.text = run.Phase == RunPhase.Shop ? "SHOP" : run.Phase == RunPhase.FloorProgress ? "FLOOR MAP" : "BIG BLIND";
-            blindScore.text = $"Score at least\n{level.Quota}";
+            blindScore.text = $"Score\n{level.CurrentScore} / {level.Quota}";
             levelInfo.text = $"Floor {level.FloorIndex}  |  Level {level.LevelIndex}";
             if (run.Phase == RunPhase.PlayingLevel && isScoring)
             {
-                roundScore.text = "Scoring\n...";
+                roundScore.text = $"Scoring\n{level.CurrentScore}/{level.Quota}";
                 countValue.text = "0";
                 multValue.text = "1";
             }
@@ -122,13 +132,15 @@ namespace DomiNox.UI
             }
             else
             {
-                roundScore.text = $"Round score\n{score.FinalScore}";
+                roundScore.text = $"Level score\n{level.CurrentScore}/{level.Quota}";
                 countValue.text = score.Count.ToString();
                 multValue.text = score.Mult.ToString();
             }
-            discardsValue.text = level.DiscardsRemaining.ToString();
+            handsValue.text = $"{level.HandsRemaining}/{level.MaxHands}";
+            discardsValue.text = $"{level.DiscardsRemaining}/{level.MaxDiscards}";
             creditsValue.text = $"${run.Credits}";
-            placedValue.text = $"{placed}/{level.MaxPlacedDominoes}";
+            placedValue.text = lightPlaced > 0 ? $"{placed}/{level.MaxPlacedDominoes} (+{lightPlaced} Light)" : $"{placed}/{level.MaxPlacedDominoes}";
+            bagValue.text = $"{run.Bag.RemainingCount()} left";
             var displayedBoss = level.Boss?.Definition ?? run.CurrentFloorBoss;
             bossValue.text = displayedBoss == null ? "-" : displayedBoss.Name;
             bossValue.color = displayedBoss == null ? Color.white : new Color(1f, 0.72f, 0.28f);
@@ -140,7 +152,7 @@ namespace DomiNox.UI
             {
                 var title = preview.IsCombo ? "Combo" : "Pattern";
                 var detail = string.IsNullOrWhiteSpace(preview.Detail) ? $"{preview.PatternName} Lv. {preview.Level}" : preview.Detail;
-                breakdown.text = $"{title}\n{preview.PatternName}\n{detail}\n\n{preview.CountBonus} Tile x {preview.MultBonus} Mult";
+                breakdown.text = $"Level Score\n{level.CurrentScore} / {level.Quota}\n\n{title}\n{preview.PatternName}\n{detail}\n\n{preview.CountBonus} Tile x {preview.MultBonus} Mult";
             }
             else
             {
@@ -279,9 +291,11 @@ namespace DomiNox.UI
             valuePatternsTab = CreateTabButton(tabs.transform, "Patterns de valeur");
             designPatternsTab = CreateTabButton(tabs.transform, "Patterns de design");
             combosTab = CreateTabButton(tabs.transform, "Combos");
+            floorTab = CreateTabButton(tabs.transform, "Floor");
             valuePatternsTab.onClick.AddListener(() => ShowPatternTab(true));
             designPatternsTab.onClick.AddListener(() => ShowPatternTab(false));
             combosTab.onClick.AddListener(ShowCombosTab);
+            floorTab.onClick.AddListener(ShowFloorTab);
 
             var pagesRoot = new GameObject("Pages", typeof(RectTransform), typeof(LayoutElement));
             pagesRoot.transform.SetParent(patternOverlay.transform, false);
@@ -309,6 +323,8 @@ namespace DomiNox.UI
             {
                 CreateComboRow(comboContent, combo);
             }
+
+            floorContent = CreatePatternScrollPage(pagesRoot.transform, "FloorPage", out floorPage);
 
             ShowPatternTab(true);
             patternOverlay.SetActive(false);
@@ -372,9 +388,11 @@ namespace DomiNox.UI
             valuePatternsPage.SetActive(showValuePatterns);
             designPatternsPage.SetActive(!showValuePatterns);
             combosPage.SetActive(false);
+            floorPage.SetActive(false);
             valuePatternsTab.GetComponent<Image>().color = showValuePatterns ? new Color(0.24f, 0.34f, 0.5f) : new Color(0.18f, 0.22f, 0.28f);
             designPatternsTab.GetComponent<Image>().color = showValuePatterns ? new Color(0.18f, 0.22f, 0.28f) : new Color(0.24f, 0.34f, 0.5f);
             combosTab.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
+            floorTab.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
         }
 
         private void ShowCombosTab()
@@ -382,9 +400,24 @@ namespace DomiNox.UI
             valuePatternsPage.SetActive(false);
             designPatternsPage.SetActive(false);
             combosPage.SetActive(true);
+            floorPage.SetActive(false);
             valuePatternsTab.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
             designPatternsTab.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
             combosTab.GetComponent<Image>().color = new Color(0.24f, 0.34f, 0.5f);
+            floorTab.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
+        }
+
+        private void ShowFloorTab()
+        {
+            valuePatternsPage.SetActive(false);
+            designPatternsPage.SetActive(false);
+            combosPage.SetActive(false);
+            floorPage.SetActive(true);
+            valuePatternsTab.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
+            designPatternsTab.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
+            combosTab.GetComponent<Image>().color = new Color(0.18f, 0.22f, 0.28f);
+            floorTab.GetComponent<Image>().color = new Color(0.24f, 0.34f, 0.5f);
+            RefreshFloorPage();
         }
 
         private void CreatePatternRow(Transform parent, PatternInfo pattern, float height, bool showDiagram)
@@ -484,14 +517,80 @@ namespace DomiNox.UI
 
             foreach (var pair in secretPatternRows)
             {
-                pair.Value.SetActive(CollectableVisibilityService.IsPatternVisible(PatternCatalog.GetById(pair.Key), currentRun));
+                pair.Value.SetActive(CollectableVisibilityService.IsPatternVisibleInRunInfo(PatternCatalog.GetById(pair.Key), currentRun));
             }
 
             foreach (var pair in secretComboRows)
             {
                 var combo = PatternComboCatalog.All.FirstOrDefault(item => item.Id == pair.Key);
-                pair.Value.SetActive(CollectableVisibilityService.IsComboVisible(combo, currentRun));
+                pair.Value.SetActive(CollectableVisibilityService.IsComboVisibleInRunInfo(combo, currentRun));
             }
+
+            if (floorPage != null && floorPage.activeSelf)
+            {
+                RefreshFloorPage();
+            }
+        }
+
+        private void RefreshFloorPage()
+        {
+            if (floorContent == null || currentRun?.CurrentLevel == null)
+            {
+                return;
+            }
+
+            Clear(floorContent);
+            var floorIndex = currentRun.CurrentLevel.FloorIndex;
+            var firstLevel = ((floorIndex - 1) * GameConstants.LevelsPerFloor) + 1;
+            AddFloorHeader(floorContent, $"Floor {floorIndex}", currentRun.CurrentFloorBoss);
+            for (var offset = 0; offset < GameConstants.LevelsPerFloor; offset++)
+            {
+                var globalLevel = firstLevel + offset;
+                var levelInFloor = offset + 1;
+                var isBoss = levelInFloor == GameConstants.LevelsPerFloor;
+                var status = globalLevel < currentRun.CurrentLevel.LevelIndex ? "Cleared" : globalLevel == currentRun.CurrentLevel.LevelIndex ? "Current" : "Upcoming";
+                var title = isBoss
+                    ? $"Boss - {currentRun.CurrentFloorBoss?.Name ?? "Unknown Boss"}"
+                    : $"Table {levelInFloor}";
+                var quota = LevelQuotaService.GetQuotaForGlobalLevel(globalLevel);
+                var rule = isBoss && currentRun.CurrentFloorBoss != null ? currentRun.CurrentFloorBoss.Description : "Classic table";
+                CreateFloorRow(floorContent, title, status, quota, rule, isBoss);
+            }
+        }
+
+        private void AddFloorHeader(Transform parent, string title, DomiNox.Bosses.BossDefinition boss)
+        {
+            var header = new GameObject("FloorHeader", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            header.transform.SetParent(parent, false);
+            header.GetComponent<Image>().color = new Color(0.1f, 0.08f, 0.14f, 0.96f);
+            header.GetComponent<LayoutElement>().preferredHeight = 92f;
+            var layout = header.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(14, 14, 10, 10);
+            layout.spacing = 4f;
+            var titleText = UiFactory.CreateText(header.transform, "Title", title, 22, TextAnchor.MiddleLeft);
+            titleText.color = new Color(0.98f, 0.84f, 0.34f);
+            var bossText = UiFactory.CreateText(header.transform, "Boss", boss == null ? "Boss: unknown" : $"Upcoming Boss: {boss.Name}\nRule: {boss.Description}", 13, TextAnchor.MiddleLeft);
+            bossText.color = new Color(1f, 0.72f, 0.28f);
+        }
+
+        private void CreateFloorRow(Transform parent, string title, string status, int quota, string rule, bool isBoss)
+        {
+            var row = new GameObject($"Floor_{title}", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            row.transform.SetParent(parent, false);
+            row.GetComponent<Image>().color = status == "Current" ? new Color(0.12f, 0.16f, 0.23f, 0.98f) : new Color(0.08f, 0.1f, 0.14f, 0.96f);
+            var outline = row.GetComponent<Outline>();
+            outline.effectColor = isBoss ? new Color(1f, 0.35f, 0.22f) : status == "Current" ? new Color(0.98f, 0.84f, 0.34f) : new Color(0.18f, 0.24f, 0.32f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            row.GetComponent<LayoutElement>().preferredHeight = 86f;
+            var layout = row.GetComponent<VerticalLayoutGroup>();
+            layout.padding = new RectOffset(14, 14, 8, 8);
+            layout.spacing = 3f;
+            var titleText = UiFactory.CreateText(row.transform, "Title", $"{title} - {status}", 16, TextAnchor.MiddleLeft);
+            titleText.color = isBoss ? new Color(1f, 0.55f, 0.32f) : new Color(0.98f, 0.84f, 0.34f);
+            var quotaText = UiFactory.CreateText(row.transform, "Quota", $"Score at least {quota}", 13, TextAnchor.MiddleLeft);
+            quotaText.color = new Color(0.82f, 0.86f, 0.92f);
+            var ruleText = UiFactory.CreateText(row.transform, "Rule", rule, 12, TextAnchor.MiddleLeft);
+            ruleText.color = new Color(0.65f, 0.72f, 0.8f);
         }
 
         private void CreatePatternDiagram(Transform parent, PatternInfo pattern)
@@ -548,6 +647,14 @@ namespace DomiNox.UI
             rect.anchorMax = Vector2.one;
             rect.offsetMin = Vector2.zero;
             rect.offsetMax = Vector2.zero;
+        }
+
+        private static void Clear(Transform root)
+        {
+            foreach (Transform child in root)
+            {
+                Destroy(child.gameObject);
+            }
         }
 
         private Text CreateFormulaPill(Transform parent, string name, Color color)

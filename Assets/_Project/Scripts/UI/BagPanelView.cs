@@ -46,7 +46,7 @@ namespace DomiNox.UI
 
         public void Render(RunState run)
         {
-            countText.text = $"{run.Bag.RemainingCount()} / 28";
+            countText.text = $"{run.Bag.RemainingCount()} / {run.TotalDominoCount}";
             if (overlay.activeSelf)
             {
                 RenderOverlay(run);
@@ -110,18 +110,19 @@ namespace DomiNox.UI
             }
 
             var remainingIds = new HashSet<string>(run.Bag.RemainingDominoes.Select(domino => domino.InstanceId));
-            var discardedIds = new HashSet<string>(run.Bag.DiscardedDominoes.Select(domino => domino.InstanceId));
+            var discardedIds = new HashSet<string>(run.Bag.DiscardedDominoes.Concat(run.CurrentLevel.DiscardedThisLevel).Select(domino => domino.InstanceId));
             var handIds = new HashSet<string>(run.CurrentLevel.Hand.Dominoes.Select(domino => domino.InstanceId));
             var placedIds = new HashSet<string>(run.CurrentLevel.Grid.GetPlacedDominoes().Select(placed => placed.Domino.InstanceId));
+            var playedIds = new HashSet<string>(run.CurrentLevel.PlayedThisLevel.Select(domino => domino.InstanceId));
 
-            foreach (var domino in DominoFactory.CreateDoubleSixSet())
+            foreach (var domino in run.Bag.RemainingDominoes.Concat(run.CurrentLevel.Hand.Dominoes).Concat(run.CurrentLevel.Grid.GetPlacedDominoes().Select(placed => placed.Domino)).Concat(run.CurrentLevel.PlayedThisLevel).Concat(run.CurrentLevel.DiscardedThisLevel).Concat(run.Bag.DiscardedDominoes).GroupBy(domino => domino.InstanceId).Select(group => group.First()).OrderBy(domino => domino.Definition.Left).ThenBy(domino => domino.Definition.Right).ThenBy(domino => domino.InstanceId))
             {
-                var status = GetStatus(domino, remainingIds, handIds, placedIds, discardedIds);
+                var status = GetStatus(domino, remainingIds, handIds, placedIds, discardedIds, playedIds);
                 CreateDominoStatus(domino, status, status == "Bag");
             }
         }
 
-        private static string GetStatus(DominoInstance domino, HashSet<string> remainingIds, HashSet<string> handIds, HashSet<string> placedIds, HashSet<string> discardedIds)
+        private static string GetStatus(DominoInstance domino, HashSet<string> remainingIds, HashSet<string> handIds, HashSet<string> placedIds, HashSet<string> discardedIds, HashSet<string> playedIds)
         {
             if (remainingIds.Contains(domino.InstanceId))
             {
@@ -138,6 +139,11 @@ namespace DomiNox.UI
                 return "Pose";
             }
 
+            if (playedIds.Contains(domino.InstanceId))
+            {
+                return "Joue";
+            }
+
             if (discardedIds.Contains(domino.InstanceId))
             {
                 return "Defausse";
@@ -151,8 +157,13 @@ namespace DomiNox.UI
             var card = new GameObject($"Domino_{domino.InstanceId}", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             card.transform.SetParent(listRoot, false);
             card.GetComponent<Image>().color = available ? Color.white : new Color(0.28f, 0.3f, 0.34f, 0.88f);
+            var modifier = DominoModifierRegistry.GetById(domino.ModifierId);
+            if (modifier != null)
+            {
+                card.GetComponent<Image>().color = Color.Lerp(card.GetComponent<Image>().color, modifier.ColorTheme, 0.25f);
+            }
 
-            var value = UiFactory.CreateText(card.transform, "Value", domino.ToString(), 18, TextAnchor.MiddleCenter);
+            var value = UiFactory.CreateText(card.transform, "Value", modifier == null ? domino.ToString() : $"{domino} {modifier.Badge}", 18, TextAnchor.MiddleCenter);
             value.color = available ? Color.black : new Color(0.62f, 0.66f, 0.72f);
             value.rectTransform.anchorMin = new Vector2(0f, 0.28f);
             value.rectTransform.anchorMax = Vector2.one;

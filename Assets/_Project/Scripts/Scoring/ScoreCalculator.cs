@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using DomiNox.Bosses;
+using DomiNox.Dominoes;
 using DomiNox.Dominex;
 using DomiNox.Grid;
 using DomiNox.Patterns;
@@ -36,7 +37,9 @@ namespace DomiNox.Scoring
             var mult = 1;
             var breakdown = new List<string> { $"Count de base: {count}", "Mult de base: 1" };
             var steps = new List<ScoringStep>();
+            var dominoModifierEffects = new List<DominoModifierEffectResult>();
             var order = 0;
+            var finalScoreMultiplier = 1f;
             steps.Add(new ScoringStep(ScoringStepType.Reset, string.Empty, "Reset", 0, 0, 1f, "Reset scoring display", order++));
             var disabledPatternIds = boss?.Definition.RuleType == BossRuleType.DisablePatterns ? boss.Definition.DisabledPatternIds : null;
             var detectedPatternInfos = patternDetector.DetectPatternInfos(placedDominoes, maxPlacedDominoes, disabledPatternIds);
@@ -94,9 +97,21 @@ namespace DomiNox.Scoring
                 {
                     steps.Add(new ScoringStep(ScoringStepType.DominoCount, placed.Domino.InstanceId, placed.Domino.Definition.ToString(), dominoCount, 0, 1f, $"+{dominoCount} Tile", order++, placed, FloatingTextType.Count));
                 }
+
+                foreach (var modifierEffect in DominoModifierEffectResolver.Resolve(placed))
+                {
+                    dominoModifierEffects.Add(modifierEffect);
+                    count += modifierEffect.CountDelta;
+                    mult += modifierEffect.MultDelta;
+                    finalScoreMultiplier *= modifierEffect.FinalScoreMultiplier;
+                    if (modifierEffect.CountDelta != 0 || modifierEffect.MultDelta != 0 || modifierEffect.FinalScoreMultiplier != 1f)
+                    {
+                        breakdown.Add($"{modifierEffect.ModifierName}: {modifierEffect.Description}");
+                        steps.Add(new ScoringStep(ScoringStepType.DominoModifier, modifierEffect.ModifierId, modifierEffect.ModifierName, modifierEffect.CountDelta, modifierEffect.MultDelta, modifierEffect.FinalScoreMultiplier, modifierEffect.Description, order++, placed, modifierEffect.FinalScoreMultiplier != 1f ? FloatingTextType.Multiplier : modifierEffect.MultDelta != 0 ? FloatingTextType.Mult : FloatingTextType.Count));
+                    }
+                }
             }
 
-            var finalScoreMultiplier = 1f;
             if (boss?.Definition.RuleType == BossRuleType.JackpotBoost)
             {
                 var sevenCount = placedDominoes.Count(placed => placed.Domino.Definition.Sum == 7);
@@ -120,7 +135,7 @@ namespace DomiNox.Scoring
 
                 if (patternIds.Contains(PatternNames.JackpotSevenId))
                 {
-                    finalScoreMultiplier = boss.Definition.JackpotFinalScoreMultiplier;
+                    finalScoreMultiplier *= boss.Definition.JackpotFinalScoreMultiplier;
                     breakdown.Add($"Boss - Jackpot 7: x{finalScoreMultiplier:0.##} score final");
                     steps.Add(new ScoringStep(ScoringStepType.DomiNexMultiplier, boss.Definition.Id, boss.Definition.Name, 0, 0, finalScoreMultiplier, $"x{finalScoreMultiplier:0.##}", order++, floatingTextType: FloatingTextType.Multiplier));
                 }
@@ -134,7 +149,7 @@ namespace DomiNox.Scoring
                 ? $"Score final: {count} x {mult} = {finalScore}"
                 : $"Score final: {count} x {mult} x {finalScoreMultiplier:0.##} = {finalScore}");
             steps.Add(new ScoringStep(ScoringStepType.FinalScore, string.Empty, "Final Score", 0, 0, finalScoreMultiplier, finalScore.ToString(), order++, floatingTextType: FloatingTextType.Multiplier));
-            return new ScoreResult(count, mult, finalScore, patterns, breakdown, valuePattern?.Id, valuePattern?.Name, valueLevel, designPattern?.Id, designPattern?.Name, designLevel, steps, patternCombo: comboResult);
+            return new ScoreResult(count, mult, finalScore, patterns, breakdown, valuePattern?.Id, valuePattern?.Name, valueLevel, designPattern?.Id, designPattern?.Name, designLevel, steps, patternCombo: comboResult, dominoModifierEffects: dominoModifierEffects);
         }
     }
 }

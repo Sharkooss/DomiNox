@@ -8,6 +8,7 @@ namespace DomiNox.Scoring
         PatternComboCountBonus,
         PatternComboMultBonus,
         DominoCount,
+        DominoModifier,
         BossCount,
         BossMult,
         DomiNexCount,

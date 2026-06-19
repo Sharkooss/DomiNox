@@ -1,0 +1,32 @@
+namespace DomiNox.Jackpot
+{
+    public enum JackpotRewardType
+    {
+        SmallCredits,
+        MeterRefund,
+        FreeShopReroll,
+        ExtraDiscard,
+        Credits10,
+        JumboGemstonePack,
+        FutureImprovedDomino,
+        NextShopFreeDomiNex,
+        NextShopDiscount,
+        SkullCreditsQuota,
+        SpinAndCredits,
+        Credits30,
+        MegaGemstonePackAndPatternLevels,
+        FutureSpecialDominoChoice,
+        LegendaryDomiNexChoice,
+        ExtraSlots,
+        CursedDomiNexPlaceholder,
+        MajorRoyalSeat,
+        MajorGemFlood,
+        MajorCasinoCredit,
+        MajorPatternAscension,
+        MajorCrownDomiNex,
+        MajorBossBribe,
+        MajorInfiniteReroll,
+        MajorDoublePrize,
+        MajorJackpotEngine
+    }
+}
