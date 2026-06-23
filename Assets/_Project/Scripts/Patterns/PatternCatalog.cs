@@ -20,9 +20,9 @@ namespace DomiNox.Patterns
         {
             new PatternInfo(PatternNames.BigLoopId, PatternNames.BigLoop, PatternCategory.Design, "Grande boucle fermee et connectee formant un carre 4x4.", "+100 Tile, +6 Mult.", 100, 6, 100, 1, 0, true, "XXXX", "X..X", "X..X", "XXXX"),
             new PatternInfo(PatternNames.TileLoopId, PatternNames.TileLoop, PatternCategory.Design, "Les dominos forment une boucle fermee avec connexions valides.", "+30 Tile, +3 Mult.", 30, 3, 80, "XXX", "X.X", "XXX"),
-            new PatternInfo(PatternNames.ChristCrossId, PatternNames.ChristCross, PatternCategory.Design, "Forme de croix prolongee avec un centre clair et une branche verticale etendue.", "+50 Tile, +4 Mult.", 50, 4, 60, 1, 0, true, "..X...", "..X...", "XXXX..", "..X...", "..X..."),
+            new PatternInfo(PatternNames.ChristCrossId, PatternNames.ChristCross, PatternCategory.Design, "Forme de croix prolongee avec un centre clair et une branche verticale etendue.", "+50 Tile, +4 Mult.", 50, 4, 60, 1, 0, true, "..X..", "..X..", "XXXXX", "..X..", "..X..", "..X.."),
             new PatternInfo(PatternNames.CrossTileId, PatternNames.CrossTile, PatternCategory.Design, "Au moins 4 dominos forment une vraie croix autour d'un centre clair.", "+10 Tile, +2 Mult.", 10, 2, 40, ".X.", "XXX", ".X."),
-            new PatternInfo(PatternNames.TileLineId, PatternNames.TileLine, PatternCategory.Design, "Au moins 3 dominos connectes sur une ligne horizontale ou verticale.", "+5 Tile, +2 Mult.", 5, 2, 20, "XXX", "...", "...")
+            new PatternInfo(PatternNames.TileLineId, PatternNames.TileLine, PatternCategory.Design, "Au moins 3 dominos connectes sur une ligne horizontale ou verticale.", "+5 Tile, +2 Mult.", 5, 2, 20, "...", "XXXXX", "...")
         };
 
         public static IReadOnlyList<PatternInfo> BonusPatterns { get; } = new PatternInfo[0];

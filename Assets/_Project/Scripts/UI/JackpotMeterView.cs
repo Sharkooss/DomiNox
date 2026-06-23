@@ -262,36 +262,36 @@ namespace DomiNox.UI
         {
             foreach (Transform child in infoRewardsPage) Destroy(child.gameObject);
 
-            var consolation = string.Join("   ·   ", System.Linq.Enumerable.Select(JackpotRewardCatalog.ConsolationRewards, reward => reward.Name));
-            AddRewardHeader("Consolation (lot de secours)");
-            var consoText = UiFactory.CreateText(infoRewardsPage, "Conso", consolation, DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
-            consoText.color = DomiNoxTheme.TextSecondary;
-            consoText.GetComponent<LayoutElement>().preferredHeight = 26f;
-
-            AddRewardHeader("Paires & Triples (triples masques jusqu'a obtention)");
+            AddRewardHeader("Paires & Triples (triple masque jusqu'a obtention)");
             var discovered = controller.Profile?.discoveredJackpotTriples;
             foreach (var symbol in SymbolOrder())
             {
                 if (symbol == JackpotSymbol.Blank) continue;
                 var data = JackpotSymbolViewDataCatalog.Get(symbol);
-                var row = InfoRow($"Rew_{symbol}", infoRewardsPage, data.Color, 46f);
+                var row = InfoRow($"Rew_{symbol}", infoRewardsPage, data.Color, 50f);
                 AddGlyph(row, data);
-                var pair = JackpotRewardCatalog.GetPairReward(symbol).Name;
+                var pair = JackpotRewardCatalog.GetPairReward(symbol).Description;
                 var known = discovered != null && discovered.Contains(symbol.ToString());
-                var triple = known ? JackpotRewardCatalog.GetTripleReward(symbol).Name : "??? (a decouvrir)";
-                var info = UiFactory.CreateText(row, "Info", $"{symbol}\nPaire : {pair}    Triple : {triple}", DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
-                info.color = known ? DomiNoxTheme.TextSecondary : DomiNoxTheme.TextMuted;
+                var triple = known ? JackpotRewardCatalog.GetTripleReward(symbol).Description : "??? a decouvrir";
+                var info = UiFactory.CreateText(row, "Info", $"{data.DisplayName}\nx2 : {pair}    x3 : {triple}", DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
+                info.color = DomiNoxTheme.TextSecondary;
                 info.GetComponent<LayoutElement>().flexibleWidth = 1f;
             }
 
             var majorKnown = discovered != null && discovered.Contains(JackpotSymbol.Seven.ToString());
             var majorRow = InfoRow("Rew_Major", infoRewardsPage, DomiNoxTheme.Danger, 40f);
             var majorText = UiFactory.CreateText(majorRow, "Major", majorKnown
-                ? "777 — MAJOR JACKPOT : choisis 2 recompenses majeures."
-                : "777 — MAJOR JACKPOT : ??? (a decouvrir)", DomiNoxTheme.FontSM, TextAnchor.MiddleLeft);
+                ? "777 MAJOR JACKPOT : choisis 2 recompenses majeures"
+                : "777 MAJOR JACKPOT : ??? a decouvrir", DomiNoxTheme.FontSM, TextAnchor.MiddleLeft);
             majorText.color = majorKnown ? DomiNoxTheme.JackpotAmber : DomiNoxTheme.TextMuted;
             majorText.fontStyle = FontStyle.Bold;
             majorText.GetComponent<LayoutElement>().flexibleWidth = 1f;
+
+            AddRewardHeader("Lots de consolation (rien aligne)");
+            var consolation = string.Join("   ·   ", System.Linq.Enumerable.Select(JackpotRewardCatalog.ConsolationRewards, reward => reward.Description.TrimEnd('.')));
+            var consoText = UiFactory.CreateText(infoRewardsPage, "Conso", consolation, DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
+            consoText.color = DomiNoxTheme.TextMuted;
+            consoText.GetComponent<LayoutElement>().flexibleHeight = 1f;
         }
 
         private void AddRewardHeader(string text)
@@ -306,17 +306,23 @@ namespace DomiNox.UI
         {
             var row = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
             row.transform.SetParent(parent, false);
-            row.GetComponent<Image>().color = DomiNoxTheme.WithAlpha(DomiNoxTheme.BgCard, 0.55f);
-            DomiNoxTheme.AddOutline(row, DomiNoxTheme.WithAlpha(accent, 0.5f), 1f);
+            row.GetComponent<Image>().color = DomiNoxTheme.BgCard;
+            DomiNoxTheme.AddOutline(row, DomiNoxTheme.WithAlpha(DomiNoxTheme.BorderNormal, 0.7f), 1f);
             row.GetComponent<LayoutElement>().preferredHeight = height;
             var layout = row.GetComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(10, 10, 3, 3);
-            layout.spacing = 10f;
+            layout.padding = new RectOffset(0, 12, 2, 2);
+            layout.spacing = 8f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = true;
+
+            // Thin colored accent stripe on the left (sober, keeps the row dark and readable).
+            var stripe = new GameObject("Stripe", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            stripe.transform.SetParent(row.transform, false);
+            stripe.GetComponent<Image>().color = accent;
+            stripe.GetComponent<LayoutElement>().preferredWidth = 5f;
             return row.transform;
         }
 
