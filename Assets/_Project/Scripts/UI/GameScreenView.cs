@@ -28,7 +28,6 @@ namespace DomiNox.UI
         private ShopView shopView;
         private LayoutElement shopLayout;
         private Text feedback;
-        private Text utilityInfo;
         private FloatingTextService floatingText;
         private FeedbackService feedbackService;
         private GameObject centerGameplayPanel;
@@ -136,7 +135,7 @@ namespace DomiNox.UI
             floorProgressLayout.flexibleWidth = 1f;
             floorProgressView.Initialize(controller);
 
-            gridPanel = CreatePanel("GridPanel", centerGameplayPanel.transform, new Color(0.06f, 0.08f, 0.11f, 0.72f));
+            gridPanel = CreatePanel("GridPanel", centerGameplayPanel.transform, DomiNoxTheme.BgPanel);
             var gridPanelLayout = gridPanel.GetComponent<LayoutElement>();
             gridPanelLayout.preferredHeight = 466f;
             var gridPanelGroup = gridPanel.AddComponent<HorizontalLayoutGroup>();
@@ -152,14 +151,15 @@ namespace DomiNox.UI
             gridLayout.preferredHeight = 428f;
             gridView.Initialize(controller);
 
-            handPanel = CreatePanel("PlayerHandPanel", centerGameplayPanel.transform, new Color(0.07f, 0.09f, 0.12f, 0.92f));
+            handPanel = CreatePanel("PlayerHandPanel", centerGameplayPanel.transform, DomiNoxTheme.BgPanel);
             handPanel.GetComponent<LayoutElement>().preferredHeight = 112f;
             var handPanelLayout = handPanel.AddComponent<VerticalLayoutGroup>();
             handPanelLayout.padding = new RectOffset(10, 10, 8, 10);
             handPanelLayout.spacing = 5f;
             handPanelLayout.childAlignment = TextAnchor.UpperCenter;
-            var handTitle = UiFactory.CreateText(handPanel.transform, "Title", "Main du joueur", 14, TextAnchor.MiddleCenter);
-            handTitle.color = new Color(0.72f, 0.78f, 0.86f);
+            var handTitle = UiFactory.CreateText(handPanel.transform, "Title", "PLAYER HAND", DomiNoxTheme.FontXS, TextAnchor.MiddleCenter);
+            handTitle.color = DomiNoxTheme.TextMuted;
+            handTitle.fontStyle = FontStyle.Bold;
 
             handView = new GameObject("Hand", typeof(RectTransform), typeof(LayoutElement)).AddComponent<HandView>();
             handView.transform.SetParent(handPanel.transform, false);
@@ -182,7 +182,7 @@ namespace DomiNox.UI
             modalOverlayRoot = new GameObject("ModalOverlayRoot", typeof(RectTransform), typeof(Image));
             modalOverlayRoot.transform.SetParent(canvas.transform, false);
             Stretch(modalOverlayRoot.GetComponent<RectTransform>());
-            modalOverlayRoot.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.28f);
+            modalOverlayRoot.GetComponent<Image>().color = DomiNoxTheme.WithAlpha(Color.black, 0.55f);
 
             bossIntroView = new GameObject("BossIntroView", typeof(RectTransform)).AddComponent<BossIntroView>();
             bossIntroView.transform.SetParent(canvas.transform, false);
@@ -207,10 +207,10 @@ namespace DomiNox.UI
             lostRect.sizeDelta = new Vector2(520f, 360f);
             runLostView.Initialize();
 
-            feedback = UiFactory.CreateText(centerGameplayPanel.transform, "Feedback", string.Empty, 18, TextAnchor.MiddleCenter);
-            feedback.color = new Color(0.95f, 0.85f, 0.42f);
+            feedback = UiFactory.CreateText(centerGameplayPanel.transform, "Feedback", string.Empty, DomiNoxTheme.FontMD, TextAnchor.MiddleCenter);
+            feedback.color = DomiNoxTheme.Gold;
 
-            rightUtilityPanel = CreatePanel("RightUtilityPanel", root.transform, new Color(0.06f, 0.08f, 0.11f, 0.88f));
+            rightUtilityPanel = CreatePanel("RightUtilityPanel", root.transform, DomiNoxTheme.BgPanel);
             var rightLayoutElement = rightUtilityPanel.GetComponent<LayoutElement>();
             rightLayoutElement.preferredWidth = 220f;
             rightLayoutElement.flexibleHeight = 1f;
@@ -218,22 +218,41 @@ namespace DomiNox.UI
             rightLayout.padding = new RectOffset(10, 10, 10, 10);
             rightLayout.spacing = 10f;
             rightLayout.childAlignment = TextAnchor.UpperCenter;
+            rightLayout.childControlWidth = true;
+            rightLayout.childControlHeight = true;
+            rightLayout.childForceExpandWidth = true;
+            rightLayout.childForceExpandHeight = false;
 
-            utilityInfo = UiFactory.CreateText(rightUtilityPanel.transform, "UtilityInfo", string.Empty, 14, TextAnchor.UpperLeft);
-            utilityInfo.GetComponent<LayoutElement>().preferredHeight = 130f;
-            bagPanel = new GameObject("BagPanel", typeof(RectTransform), typeof(LayoutElement)).AddComponent<BagPanelView>();
-            bagPanel.transform.SetParent(rightUtilityPanel.transform, false);
-            var bagLayout = bagPanel.GetComponent<LayoutElement>();
-            bagLayout.preferredWidth = 92f;
-            bagLayout.preferredHeight = 54f;
-            bagPanel.Initialize(controller);
-
+            // Jackpot at the top, enlarged for emphasis.
             jackpotMeterView = new GameObject("JackpotMeter", typeof(RectTransform), typeof(LayoutElement)).AddComponent<JackpotMeterView>();
             jackpotMeterView.transform.SetParent(rightUtilityPanel.transform, false);
             var jackpotLayout = jackpotMeterView.GetComponent<LayoutElement>();
-            jackpotLayout.preferredWidth = 190f;
-            jackpotLayout.preferredHeight = 245f;
+            jackpotLayout.preferredHeight = 300f;
+            jackpotLayout.flexibleWidth = 1f;
             jackpotMeterView.Initialize(controller);
+
+            // Flexible spacer pushes the bag down to the bottom.
+            var rightSpacer = new GameObject("RightSpacer", typeof(RectTransform), typeof(LayoutElement));
+            rightSpacer.transform.SetParent(rightUtilityPanel.transform, false);
+            rightSpacer.GetComponent<LayoutElement>().flexibleHeight = 1f;
+
+            // Small bag, anchored bottom-right.
+            var bagRow = new GameObject("BagRow", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            bagRow.transform.SetParent(rightUtilityPanel.transform, false);
+            bagRow.GetComponent<LayoutElement>().preferredHeight = 64f;
+            var bagRowLayout = bagRow.GetComponent<HorizontalLayoutGroup>();
+            bagRowLayout.childAlignment = TextAnchor.MiddleRight;
+            bagRowLayout.childControlWidth = true;
+            bagRowLayout.childControlHeight = true;
+            bagRowLayout.childForceExpandWidth = false;
+            bagRowLayout.childForceExpandHeight = false;
+
+            bagPanel = new GameObject("BagPanel", typeof(RectTransform), typeof(LayoutElement)).AddComponent<BagPanelView>();
+            bagPanel.transform.SetParent(bagRow.transform, false);
+            var bagLayout = bagPanel.GetComponent<LayoutElement>();
+            bagLayout.preferredWidth = 96f;
+            bagLayout.preferredHeight = 60f;
+            bagPanel.Initialize(controller);
         }
 
         private void Render(RunState run, ScoreResult score, string message)
@@ -243,19 +262,21 @@ namespace DomiNox.UI
             var isPlaying = run.Phase == RunPhase.PlayingLevel;
             var isReward = run.Phase == RunPhase.LevelReward;
             var isLost = run.Phase == RunPhase.RunLost;
+            var isWon = run.Phase == RunPhase.RunWon;
+            var isRunEnd = isLost || isWon;
             floorProgressView.gameObject.SetActive(isFloorProgress);
             gridPanel.SetActive(isPlaying);
             actionButtons.gameObject.SetActive(isPlaying);
             handPanel.SetActive(isPlaying);
             rightUtilityPanel.SetActive(true);
             shopView.gameObject.SetActive(isShop);
-            modalOverlayRoot.SetActive(isReward || isLost);
-            if (isReward || isLost)
+            modalOverlayRoot.SetActive(isReward || isRunEnd);
+            if (isReward || isRunEnd)
             {
                 modalOverlayRoot.transform.SetAsLastSibling();
             }
             levelRewardView.gameObject.SetActive(isReward);
-            runLostView.gameObject.SetActive(isLost);
+            runLostView.gameObject.SetActive(isRunEnd);
 
             var preview = isPlaying && !controller.IsScoring ? controller.CalculateCurrentScoringPreview() : null;
             scorePanel.Render(run, score, preview, controller.IsScoring);
@@ -265,7 +286,6 @@ namespace DomiNox.UI
             if (isFloorProgress)
             {
                 floorProgressView.Render(run);
-                utilityInfo.text = "Floor Progress\nLe boss est visible des maintenant.\n\nPrepare tes achats au shop avant la table boss.";
             }
 
             if (isPlaying)
@@ -273,24 +293,16 @@ namespace DomiNox.UI
                 gridView.Render(run.CurrentLevel.Grid);
                 handView.Render(run.CurrentLevel.Hand, controller.SelectedDomino, controller.CurrentOrientation, controller.SelectedForDiscard);
                 actionButtons.Render(controller);
-                utilityInfo.text = $"Rotation\nA/E : {controller.CurrentOrientation}\n\nControle\nDrag un domino vers la grille.\nClique un domino pour le marquer en defausse.";
-            }
-
-            if (isShop)
-            {
-                utilityInfo.text = "Shop\nAchete un DomiNex ou passe au niveau suivant.\n\nLa reserve reste disponible pour verifier le sac.";
             }
 
             if (isReward)
             {
                 levelRewardView.Render(run);
-                utilityInfo.text = "Cash Out\nRecupere tes credits avant d'ouvrir le shop.\n\nLes bonus viennent des discards restants et des interets.";
             }
 
-            if (isLost)
+            if (isRunEnd)
             {
                 runLostView.Render(run);
-                utilityInfo.text = "Run perdue\nRetourne au menu principal pour relancer une partie.";
             }
 
             shopView.Render(run);
@@ -400,12 +412,10 @@ namespace DomiNox.UI
 
         private static GameObject CreatePanel(string name, Transform parent, Color color)
         {
-            var panel = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Outline), typeof(LayoutElement));
+            var panel = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(LayoutElement));
             panel.transform.SetParent(parent, false);
             panel.GetComponent<Image>().color = color;
-            var outline = panel.GetComponent<Outline>();
-            outline.effectColor = new Color(0.16f, 0.24f, 0.34f);
-            outline.effectDistance = new Vector2(2f, -2f);
+            DomiNoxTheme.AddOutline(panel, DomiNoxTheme.BorderNormal);
             return panel;
         }
 
@@ -499,7 +509,7 @@ namespace DomiNox.UI
                 feedbackService.Pulse(anchor, effect.Triggered ? 1.18f : 1.08f);
                 feedbackService.Shake(anchor, effect.Triggered ? 6f : 2f);
                 feedbackService.Floating(effect.Description, anchor, effect.Triggered ? FloatingTextType.Multiplier : FloatingTextType.Warning);
-                if (effect.SourceId == "gros_michel" && effect.Triggered)
+                if (effect.ActionType == PostScoringActionType.DestroySelf && effect.Triggered)
                 {
                     feedbackService.Floating("Gros Michel broke!", anchor, FloatingTextType.Warning);
                     feedbackService.Flash(new Color(1f, 0.25f, 0.15f), 0.12f);

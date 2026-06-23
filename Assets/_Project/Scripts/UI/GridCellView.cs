@@ -7,8 +7,8 @@ namespace DomiNox.UI
 {
     public sealed class GridCellView : MonoBehaviour
     {
-        private static readonly Color EmptyColor = new Color(0.18f, 0.2f, 0.24f);
-        private static readonly Color OccupiedColor = new Color(0.82f, 0.82f, 0.78f);
+        private static readonly Color EmptyColor    = new Color(0.10f, 0.13f, 0.18f);
+        private static readonly Color OccupiedColor = DomiNoxTheme.IvoryWhite;
 
         private int x;
         private int y;
@@ -30,26 +30,33 @@ namespace DomiNox.UI
             y = cellY;
             background = gameObject.AddComponent<Image>();
             background.color = EmptyColor;
+            DomiNoxTheme.AddShadow(gameObject, new Color(0f, 0f, 0f, 0.3f), new Vector2(1f, -1f));
             outline = gameObject.AddComponent<Outline>();
-            outline.effectDistance = new Vector2(3f, -3f);
+            outline.effectDistance = new Vector2(2f, -2f);
+            outline.effectColor = DomiNoxTheme.BorderNormal;
             outline.enabled = false;
             var button = gameObject.AddComponent<Button>();
             button.onClick.AddListener(() => clicked?.Invoke(x, y));
-            label = UiFactory.CreateText(transform, "Label", string.Empty, 16, TextAnchor.MiddleCenter);
+            var colors = button.colors;
+            colors.highlightedColor = new Color(1f, 1f, 1f, 0.08f);
+            colors.normalColor = Color.white;
+            button.colors = colors;
+            label = UiFactory.CreateText(transform, "Label", string.Empty, DomiNoxTheme.FontMD, TextAnchor.MiddleCenter);
             label.raycastTarget = false;
+            label.fontStyle = FontStyle.Bold;
             label.rectTransform.anchorMin = Vector2.zero;
             label.rectTransform.anchorMax = Vector2.one;
             label.rectTransform.offsetMin = Vector2.zero;
             label.rectTransform.offsetMax = Vector2.zero;
-            rightBridge = CreateLine("RightBridge", new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 0.5f), new Vector2(4f, -6f));
+            rightBridge  = CreateLine("RightBridge",  new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(0f, 0.5f), new Vector2(4f, -6f));
             bottomBridge = CreateLine("BottomBridge", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 1f), new Vector2(-6f, 4f));
-            rightBridge.color = OccupiedColor;
-            bottomBridge.color = OccupiedColor;
-            topBorder = CreateLine("TopBorder", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, 3f));
-            rightBorder = CreateLine("RightBorder", new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f), new Vector2(3f, 0f));
+            rightBridge.color  = DomiNoxTheme.IvoryDark;
+            bottomBridge.color = DomiNoxTheme.IvoryDark;
+            topBorder    = CreateLine("TopBorder",    new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, 3f));
+            rightBorder  = CreateLine("RightBorder",  new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(1f, 0.5f), new Vector2(3f, 0f));
             bottomBorder = CreateLine("BottomBorder", new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 3f));
-            leftBorder = CreateLine("LeftBorder", new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(3f, 0f));
-            verticalSeparator = CreateLine("VerticalSeparator", new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(2f, 26f));
+            leftBorder   = CreateLine("LeftBorder",   new Vector2(0f, 0f), new Vector2(0f, 1f), new Vector2(0f, 0.5f), new Vector2(3f, 0f));
+            verticalSeparator   = CreateLine("VerticalSeparator",   new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(2f, 26f));
             horizontalSeparator = CreateLine("HorizontalSeparator", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f), new Vector2(26f, 2f));
             SetFrame(false, false, false, false, false, false, false, false);
         }
@@ -58,7 +65,7 @@ namespace DomiNox.UI
         {
             label.text = value;
             background.color = occupied ? OccupiedColor : EmptyColor;
-            label.color = occupied ? Color.black : Color.white;
+            label.color = occupied ? DomiNoxTheme.IvoryDark : DomiNoxTheme.TextMuted;
             outline.enabled = false;
             SetFrame(frame.Top, frame.Right, frame.Bottom, frame.Left, frame.BridgeRight, frame.BridgeBottom, frame.VerticalSeparator, frame.HorizontalSeparator);
         }
@@ -66,10 +73,13 @@ namespace DomiNox.UI
         public void SetPreview(string value, bool valid)
         {
             label.text = value;
-            background.color = valid ? new Color(0.25f, 0.72f, 0.36f, 0.9f) : new Color(0.82f, 0.18f, 0.18f, 0.9f);
-            label.color = Color.white;
+            background.color = valid
+                ? new Color(0.10f, 0.38f, 0.18f, 0.92f)
+                : new Color(0.52f, 0.10f, 0.08f, 0.92f);
+            label.color = valid ? DomiNoxTheme.Success : DomiNoxTheme.MultRed;
             outline.enabled = true;
-            outline.effectColor = valid ? new Color(0.8f, 1f, 0.84f) : new Color(1f, 0.72f, 0.72f);
+            outline.effectColor = valid ? DomiNoxTheme.Success : DomiNoxTheme.MultRed;
+            outline.effectDistance = new Vector2(2f, -2f);
             SetFrame(false, false, false, false, false, false, false, false);
         }
 
@@ -84,7 +94,7 @@ namespace DomiNox.UI
             rect.sizeDelta = sizeDelta;
             rect.anchoredPosition = Vector2.zero;
             var image = go.GetComponent<Image>();
-            image.color = Color.black;
+            image.color = DomiNoxTheme.IvoryDark;
             image.raycastTarget = false;
             return image;
         }
@@ -105,7 +115,6 @@ namespace DomiNox.UI
     public readonly struct DominoCellFrame
     {
         public static DominoCellFrame Empty { get; } = new DominoCellFrame(false, false, false, false, false, false, false, false);
-
         public bool Top { get; }
         public bool Right { get; }
         public bool Bottom { get; }
@@ -117,14 +126,9 @@ namespace DomiNox.UI
 
         public DominoCellFrame(bool top, bool right, bool bottom, bool left, bool bridgeRight, bool bridgeBottom, bool verticalSeparator, bool horizontalSeparator)
         {
-            Top = top;
-            Right = right;
-            Bottom = bottom;
-            Left = left;
-            BridgeRight = bridgeRight;
-            BridgeBottom = bridgeBottom;
-            VerticalSeparator = verticalSeparator;
-            HorizontalSeparator = horizontalSeparator;
+            Top = top; Right = right; Bottom = bottom; Left = left;
+            BridgeRight = bridgeRight; BridgeBottom = bridgeBottom;
+            VerticalSeparator = verticalSeparator; HorizontalSeparator = horizontalSeparator;
         }
     }
 }

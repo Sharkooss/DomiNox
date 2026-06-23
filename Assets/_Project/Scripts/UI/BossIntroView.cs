@@ -9,8 +9,8 @@ namespace DomiNox.UI
     public sealed class BossIntroView : MonoBehaviour
     {
         private const float RevealDuration = 2.2f;
-        private const float FadeDuration = 0.75f;
-        private const float TotalDuration = RevealDuration + FadeDuration;
+        private const float FadeDuration   = 0.75f;
+        private const float TotalDuration  = RevealDuration + FadeDuration;
 
         private GameFlowController controller;
         private CanvasGroup canvasGroup;
@@ -25,45 +25,52 @@ namespace DomiNox.UI
         public void Initialize(GameFlowController flowController)
         {
             controller = flowController;
-            gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.72f);
+            var bg = gameObject.AddComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.78f);
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
             canvasGroup.blocksRaycasts = true;
 
             var layout = gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(120, 120, 170, 120);
-            layout.spacing = 18f;
+            layout.padding = new RectOffset(120, 120, 160, 120);
+            layout.spacing = 20f;
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            var badge = new GameObject("BossBadge", typeof(RectTransform), typeof(Image), typeof(Outline), typeof(VerticalLayoutGroup), typeof(LayoutElement));
+            var badge = new GameObject("BossBadge", typeof(RectTransform), typeof(Image), typeof(VerticalLayoutGroup), typeof(LayoutElement));
             badge.transform.SetParent(transform, false);
-            badge.GetComponent<Image>().color = new Color(0.12f, 0.04f, 0.06f, 0.96f);
-            var outline = badge.GetComponent<Outline>();
-            outline.effectColor = new Color(1f, 0.2f, 0.16f);
-            outline.effectDistance = new Vector2(4f, -4f);
+            badge.GetComponent<Image>().color = new Color(0.10f, 0.03f, 0.04f, 0.98f);
+            DomiNoxTheme.AddOutline(badge, DomiNoxTheme.MultRed, 4f);
+            DomiNoxTheme.AddShadow(badge, new Color(1f, 0.10f, 0.05f, 0.28f), new Vector2(0f, -4f));
             var badgeLayout = badge.GetComponent<VerticalLayoutGroup>();
-            badgeLayout.padding = new RectOffset(34, 34, 28, 30);
-            badgeLayout.spacing = 16f;
+            badgeLayout.padding = new RectOffset(38, 38, 32, 34);
+            badgeLayout.spacing = 18f;
             badgeLayout.childAlignment = TextAnchor.MiddleCenter;
-            badge.GetComponent<LayoutElement>().preferredWidth = 760f;
-            badge.GetComponent<LayoutElement>().preferredHeight = 360f;
+            badge.GetComponent<LayoutElement>().preferredWidth = 780f;
+            badge.GetComponent<LayoutElement>().preferredHeight = 380f;
 
-            var kicker = UiFactory.CreateText(badge.transform, "Kicker", "BOSS", 22, TextAnchor.MiddleCenter);
-            kicker.color = new Color(1f, 0.42f, 0.3f);
-            kicker.GetComponent<LayoutElement>().preferredHeight = 34f;
+            var kicker = UiFactory.CreateText(badge.transform, "Kicker", "— BOSS —", DomiNoxTheme.FontLG, TextAnchor.MiddleCenter);
+            kicker.color = DomiNoxTheme.Danger;
+            kicker.fontStyle = FontStyle.Bold;
+            kicker.GetComponent<LayoutElement>().preferredHeight = 36f;
 
-            title = UiFactory.CreateText(badge.transform, "Title", string.Empty, 36, TextAnchor.MiddleCenter);
-            title.color = new Color(1f, 0.82f, 0.28f);
-            title.GetComponent<LayoutElement>().preferredHeight = 56f;
+            UiFactory.CreateSeparator(badge.transform, 1f, DomiNoxTheme.WithAlpha(DomiNoxTheme.MultRed, 0.45f));
 
-            description = UiFactory.CreateText(badge.transform, "Description", string.Empty, 18, TextAnchor.MiddleCenter);
-            description.color = new Color(0.92f, 0.94f, 0.98f);
-            description.GetComponent<LayoutElement>().preferredHeight = 88f;
+            title = UiFactory.CreateText(badge.transform, "Title", string.Empty, DomiNoxTheme.FontXXL, TextAnchor.MiddleCenter);
+            title.color = DomiNoxTheme.Gold;
+            title.fontStyle = FontStyle.Bold;
+            DomiNoxTheme.AddShadow(title.gameObject, new Color(1f, 0.5f, 0f, 0.38f), new Vector2(2f, -2f));
+            title.GetComponent<LayoutElement>().preferredHeight = 58f;
 
-            roulette = UiFactory.CreateText(badge.transform, "Roulette", string.Empty, 48, TextAnchor.MiddleCenter);
-            roulette.color = new Color(1f, 0.25f, 0.18f);
-            roulette.GetComponent<LayoutElement>().preferredHeight = 74f;
+            description = UiFactory.CreateText(badge.transform, "Description", string.Empty, DomiNoxTheme.FontMD, TextAnchor.MiddleCenter);
+            description.color = DomiNoxTheme.TextPrimary;
+            description.GetComponent<LayoutElement>().preferredHeight = 90f;
+
+            roulette = UiFactory.CreateText(badge.transform, "Roulette", string.Empty, 52, TextAnchor.MiddleCenter);
+            roulette.color = DomiNoxTheme.MultRed;
+            roulette.fontStyle = FontStyle.Bold;
+            DomiNoxTheme.AddShadow(roulette.gameObject, new Color(1f, 0.1f, 0.05f, 0.45f), new Vector2(2f, -2f));
+            roulette.GetComponent<LayoutElement>().preferredHeight = 78f;
 
             gameObject.SetActive(false);
         }
@@ -76,27 +83,20 @@ namespace DomiNox.UI
                 gameObject.SetActive(false);
                 return;
             }
-
             if (activeBoss != boss || activeLevelIndex != run.CurrentLevel.LevelIndex)
-            {
                 StartIntro(run.CurrentLevel.LevelIndex, boss);
-            }
-
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
         }
 
         private void Update()
         {
-            if (!gameObject.activeSelf || activeBoss == null)
-            {
-                return;
-            }
-
+            if (!gameObject.activeSelf || activeBoss == null) return;
             elapsed += Time.deltaTime;
             UpdateRoulette();
-            canvasGroup.alpha = elapsed <= RevealDuration ? 1f : Mathf.Clamp01(1f - ((elapsed - RevealDuration) / FadeDuration));
-
+            canvasGroup.alpha = elapsed <= RevealDuration
+                ? 1f
+                : Mathf.Clamp01(1f - ((elapsed - RevealDuration) / FadeDuration));
             if (!completionSent && elapsed >= TotalDuration)
             {
                 completionSent = true;
@@ -120,15 +120,11 @@ namespace DomiNox.UI
 
         private void UpdateRoulette()
         {
-            if (!roulette.gameObject.activeSelf || !activeBoss.BannedValue.HasValue)
-            {
-                return;
-            }
-
+            if (!roulette.gameObject.activeSelf || !activeBoss.BannedValue.HasValue) return;
             var value = elapsed < RevealDuration - 0.45f
                 ? Mathf.FloorToInt(elapsed * 12f) % 7
                 : activeBoss.BannedValue.Value;
-            roulette.text = $"Roulette: {value}";
+            roulette.text = $"BANNED: {value}";
         }
     }
 }
