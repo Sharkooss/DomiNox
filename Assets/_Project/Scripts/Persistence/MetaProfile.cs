@@ -18,5 +18,6 @@ namespace DomiNox.Persistence
         public List<string> encounteredBossIds = new List<string>();
         public List<string> unlockedDomiNexIds = new List<string>();
         public List<string> completedObjectiveIds = new List<string>();
+        public List<string> discoveredJackpotTriples = new List<string>();
     }
 }

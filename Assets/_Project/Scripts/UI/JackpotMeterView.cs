@@ -22,6 +22,10 @@ namespace DomiNox.UI
         private Button majorConfirm;
         private Transform rewardPopup;
         private Transform infoOverlay;
+        private Transform infoSymbolsPage;
+        private Transform infoRewardsPage;
+        private Button infoSymbolsTab;
+        private Button infoRewardsTab;
         private Text rewardTitle;
         private Text rewardSymbols;
         private Text rewardDescription;
@@ -122,12 +126,21 @@ namespace DomiNox.UI
 
         private void ToggleInfoOverlay()
         {
-            infoOverlay.gameObject.SetActive(!infoOverlay.gameObject.activeSelf);
-            if (infoOverlay.gameObject.activeSelf)
+            var open = !infoOverlay.gameObject.activeSelf;
+            infoOverlay.gameObject.SetActive(open);
+            if (open)
             {
+                RefreshRewardsPage();
+                ShowInfoTab(true);
                 infoOverlay.SetAsLastSibling();
             }
         }
+
+        private static JackpotSymbol[] SymbolOrder() => new[]
+        {
+            JackpotSymbol.Seven, JackpotSymbol.Crown, JackpotSymbol.DomiNex, JackpotSymbol.Gem,
+            JackpotSymbol.Domino, JackpotSymbol.Coin, JackpotSymbol.Skull, JackpotSymbol.Blank
+        };
 
         private void BuildInfoOverlay()
         {
@@ -138,7 +151,7 @@ namespace DomiNox.UI
             rect.anchorMin = new Vector2(0.5f, 0.5f);
             rect.anchorMax = new Vector2(0.5f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.sizeDelta = new Vector2(720f, 660f);
+            rect.sizeDelta = new Vector2(740f, 690f);
             infoOverlay.GetComponent<Image>().color = new Color(0.05f, 0.03f, 0.08f, 0.99f);
             DomiNoxTheme.AddOutline(infoOverlay.gameObject, DomiNoxTheme.JackpotAmber, 3f);
             DomiNoxTheme.AddShadow(infoOverlay.gameObject, new Color(1f, 0.5f, 0f, 0.3f), new Vector2(4f, -4f));
@@ -169,62 +182,150 @@ namespace DomiNox.UI
             UiFactory.StyleButton(close, DomiNoxTheme.BgCard, DomiNoxTheme.JackpotAmber);
             close.onClick.AddListener(() => infoOverlay.gameObject.SetActive(false));
 
-            var intro = UiFactory.CreateText(infoOverlay, "Intro", "Depense 1 Spin Ticket pour tourner. Aligne 2 ou 3 symboles identiques pour gagner. Trois 7 = MAJOR JACKPOT (choisis 2 recompenses majeures).", DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
-            intro.color = DomiNoxTheme.TextSecondary;
-            intro.GetComponent<LayoutElement>().preferredHeight = 32f;
+            var tabBar = new GameObject("InfoTabs", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            tabBar.transform.SetParent(infoOverlay, false);
+            tabBar.GetComponent<LayoutElement>().preferredHeight = 34f;
+            var tl = tabBar.GetComponent<HorizontalLayoutGroup>();
+            tl.spacing = 8f;
+            tl.childAlignment = TextAnchor.MiddleLeft;
+            tl.childControlWidth = true;
+            tl.childControlHeight = true;
+            tl.childForceExpandWidth = false;
+            tl.childForceExpandHeight = true;
+            infoSymbolsTab = UiFactory.CreateButton(tabBar.transform, "SymbolsTab", "Symboles & chances");
+            infoSymbolsTab.GetComponent<LayoutElement>().preferredWidth = 210f;
+            infoSymbolsTab.onClick.AddListener(() => ShowInfoTab(true));
+            infoRewardsTab = UiFactory.CreateButton(tabBar.transform, "RewardsTab", "Recompenses");
+            infoRewardsTab.GetComponent<LayoutElement>().preferredWidth = 180f;
+            infoRewardsTab.onClick.AddListener(() => ShowInfoTab(false));
+
             UiFactory.CreateSeparator(infoOverlay, 1f, DomiNoxTheme.WithAlpha(DomiNoxTheme.JackpotAmber, 0.4f));
+
+            // --- Page Symboles & chances (statique) ---
+            infoSymbolsPage = NewInfoPage("SymbolsPage");
+            var intro = UiFactory.CreateText(infoSymbolsPage, "Intro", "Depense 1 Spin Ticket pour tourner. 2 symboles identiques = paire, 3 = triple, trois 7 = MAJOR JACKPOT.", DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
+            intro.color = DomiNoxTheme.TextSecondary;
+            intro.GetComponent<LayoutElement>().preferredHeight = 30f;
 
             var weights = JackpotSpinService.GetWeights(null);
             var total = 0;
             foreach (var weight in weights.Values) total += weight;
-
-            var order = new[]
+            foreach (var symbol in SymbolOrder())
             {
-                JackpotSymbol.Seven, JackpotSymbol.Crown, JackpotSymbol.DomiNex, JackpotSymbol.Gem,
-                JackpotSymbol.Domino, JackpotSymbol.Coin, JackpotSymbol.Skull, JackpotSymbol.Blank
-            };
-            foreach (var symbol in order)
-            {
-                if (!weights.TryGetValue(symbol, out var weight)) continue;
-                CreateInfoRow(symbol, weight, total);
+                if (weights.TryGetValue(symbol, out var weight)) CreateSymbolRow(symbol, weight, total);
             }
 
-            UiFactory.CreateSeparator(infoOverlay, 1f, DomiNoxTheme.WithAlpha(DomiNoxTheme.JackpotAmber, 0.4f));
-            var mechanics = UiFactory.CreateText(infoOverlay, "Mechanics", "Heat : a 5, la prochaine paire est garantie (se vide a chaque triple/paire). Jackpot Luck : augmente les chances de Crown et Seven et reduit les Blank. Remplis le Meter pour gagner des Spin Tickets.", DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
-            mechanics.color = DomiNoxTheme.TextSecondary;
+            var mechanics = UiFactory.CreateText(infoSymbolsPage, "Mechanics", "Heat : a 5, la prochaine paire est garantie. Jackpot Luck : augmente Crown et Seven, reduit Blank. Remplis le Meter pour gagner des Spin Tickets.", DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
+            mechanics.color = DomiNoxTheme.TextMuted;
             mechanics.GetComponent<LayoutElement>().flexibleHeight = 1f;
+
+            // --- Page Recompenses (rafraichie a l'ouverture) ---
+            infoRewardsPage = NewInfoPage("RewardsPage");
 
             infoOverlay.gameObject.SetActive(false);
         }
 
-        private void CreateInfoRow(JackpotSymbol symbol, int weight, int total)
+        private Transform NewInfoPage(string name)
+        {
+            var page = new GameObject(name, typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(LayoutElement)).transform;
+            page.SetParent(infoOverlay, false);
+            page.GetComponent<LayoutElement>().flexibleHeight = 1f;
+            var layout = page.GetComponent<VerticalLayoutGroup>();
+            layout.spacing = 5f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = false;
+            return page;
+        }
+
+        private void ShowInfoTab(bool symbols)
+        {
+            infoSymbolsPage.gameObject.SetActive(symbols);
+            infoRewardsPage.gameObject.SetActive(!symbols);
+            UiFactory.StyleButton(infoSymbolsTab, symbols ? new Color(0.30f, 0.20f, 0.04f) : DomiNoxTheme.BgCard, symbols ? DomiNoxTheme.JackpotAmber : DomiNoxTheme.TextSecondary);
+            UiFactory.StyleButton(infoRewardsTab, !symbols ? new Color(0.30f, 0.20f, 0.04f) : DomiNoxTheme.BgCard, !symbols ? DomiNoxTheme.JackpotAmber : DomiNoxTheme.TextSecondary);
+        }
+
+        private void CreateSymbolRow(JackpotSymbol symbol, int weight, int total)
         {
             var data = JackpotSymbolViewDataCatalog.Get(symbol);
-            var row = new GameObject($"Info_{symbol}", typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
-            row.transform.SetParent(infoOverlay, false);
+            var row = InfoRow($"Sym_{symbol}", infoSymbolsPage, data.Color, 40f);
+            AddGlyph(row, data);
+            var percent = total <= 0 ? 0 : Mathf.RoundToInt(weight / (float)total * 100f);
+            var info = UiFactory.CreateText(row, "Info", $"{symbol}  -  {percent}% par rouleau", DomiNoxTheme.FontSM, TextAnchor.MiddleLeft);
+            info.color = DomiNoxTheme.TextSecondary;
+            info.GetComponent<LayoutElement>().flexibleWidth = 1f;
+        }
+
+        private void RefreshRewardsPage()
+        {
+            foreach (Transform child in infoRewardsPage) Destroy(child.gameObject);
+
+            var consolation = string.Join("   ·   ", System.Linq.Enumerable.Select(JackpotRewardCatalog.ConsolationRewards, reward => reward.Name));
+            AddRewardHeader("Consolation (lot de secours)");
+            var consoText = UiFactory.CreateText(infoRewardsPage, "Conso", consolation, DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
+            consoText.color = DomiNoxTheme.TextSecondary;
+            consoText.GetComponent<LayoutElement>().preferredHeight = 26f;
+
+            AddRewardHeader("Paires & Triples (triples masques jusqu'a obtention)");
+            var discovered = controller.Profile?.discoveredJackpotTriples;
+            foreach (var symbol in SymbolOrder())
+            {
+                if (symbol == JackpotSymbol.Blank) continue;
+                var data = JackpotSymbolViewDataCatalog.Get(symbol);
+                var row = InfoRow($"Rew_{symbol}", infoRewardsPage, data.Color, 46f);
+                AddGlyph(row, data);
+                var pair = JackpotRewardCatalog.GetPairReward(symbol).Name;
+                var known = discovered != null && discovered.Contains(symbol.ToString());
+                var triple = known ? JackpotRewardCatalog.GetTripleReward(symbol).Name : "??? (a decouvrir)";
+                var info = UiFactory.CreateText(row, "Info", $"{symbol}\nPaire : {pair}    Triple : {triple}", DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
+                info.color = known ? DomiNoxTheme.TextSecondary : DomiNoxTheme.TextMuted;
+                info.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            }
+
+            var majorKnown = discovered != null && discovered.Contains(JackpotSymbol.Seven.ToString());
+            var majorRow = InfoRow("Rew_Major", infoRewardsPage, DomiNoxTheme.Danger, 40f);
+            var majorText = UiFactory.CreateText(majorRow, "Major", majorKnown
+                ? "777 — MAJOR JACKPOT : choisis 2 recompenses majeures."
+                : "777 — MAJOR JACKPOT : ??? (a decouvrir)", DomiNoxTheme.FontSM, TextAnchor.MiddleLeft);
+            majorText.color = majorKnown ? DomiNoxTheme.JackpotAmber : DomiNoxTheme.TextMuted;
+            majorText.fontStyle = FontStyle.Bold;
+            majorText.GetComponent<LayoutElement>().flexibleWidth = 1f;
+        }
+
+        private void AddRewardHeader(string text)
+        {
+            var header = UiFactory.CreateText(infoRewardsPage, "RewHeader", text, DomiNoxTheme.FontSM, TextAnchor.MiddleLeft);
+            header.color = DomiNoxTheme.JackpotAmber;
+            header.fontStyle = FontStyle.Bold;
+            header.GetComponent<LayoutElement>().preferredHeight = 22f;
+        }
+
+        private static Transform InfoRow(string name, Transform parent, Color accent, float height)
+        {
+            var row = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(HorizontalLayoutGroup), typeof(LayoutElement));
+            row.transform.SetParent(parent, false);
             row.GetComponent<Image>().color = DomiNoxTheme.WithAlpha(DomiNoxTheme.BgCard, 0.55f);
-            DomiNoxTheme.AddOutline(row, DomiNoxTheme.WithAlpha(data.Color, 0.5f), 1f);
-            row.GetComponent<LayoutElement>().preferredHeight = 48f;
+            DomiNoxTheme.AddOutline(row, DomiNoxTheme.WithAlpha(accent, 0.5f), 1f);
+            row.GetComponent<LayoutElement>().preferredHeight = height;
             var layout = row.GetComponent<HorizontalLayoutGroup>();
-            layout.padding = new RectOffset(10, 10, 4, 4);
+            layout.padding = new RectOffset(10, 10, 3, 3);
             layout.spacing = 10f;
             layout.childAlignment = TextAnchor.MiddleLeft;
             layout.childControlWidth = true;
             layout.childControlHeight = true;
             layout.childForceExpandWidth = false;
             layout.childForceExpandHeight = true;
+            return row.transform;
+        }
 
-            var glyph = UiFactory.CreateText(row.transform, "Glyph", data.Label, DomiNoxTheme.FontLG, TextAnchor.MiddleCenter);
+        private static void AddGlyph(Transform row, JackpotSymbolViewData data)
+        {
+            var glyph = UiFactory.CreateText(row, "Glyph", data.Label, DomiNoxTheme.FontLG, TextAnchor.MiddleCenter);
             glyph.color = data.Color;
             glyph.fontStyle = FontStyle.Bold;
-            glyph.GetComponent<LayoutElement>().preferredWidth = 58f;
-
-            var percent = total <= 0 ? 0 : Mathf.RoundToInt(weight / (float)total * 100f);
-            var pair = symbol == JackpotSymbol.Blank ? "-" : JackpotRewardCatalog.GetPairReward(symbol).Name;
-            var triple = symbol == JackpotSymbol.Blank ? "-" : JackpotRewardCatalog.GetTripleReward(symbol).Name;
-            var info = UiFactory.CreateText(row.transform, "Info", $"{symbol}  -  {percent}% par rouleau\nPaire : {pair}    Triple : {triple}", DomiNoxTheme.FontXS, TextAnchor.MiddleLeft);
-            info.color = DomiNoxTheme.TextSecondary;
-            info.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            glyph.GetComponent<LayoutElement>().preferredWidth = 54f;
         }
 
         public void Render(RunState run)

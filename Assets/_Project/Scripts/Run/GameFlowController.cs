@@ -632,8 +632,25 @@ namespace DomiNox.Run
 
             Run.Jackpot.SpinTickets--;
             pendingJackpotSpinResult = JackpotSpinService.Spin(Run.Jackpot, random);
+            RecordJackpotDiscovery(pendingJackpotSpinResult);
             Notify("Jackpot spinning...");
             return pendingJackpotSpinResult;
+        }
+
+        // Triple/major rewards stay hidden in the slot help until obtained at least once.
+        private void RecordJackpotDiscovery(JackpotSpinResult result)
+        {
+            if (result == null || (result.Tier != JackpotRewardTier.Triple && result.Tier != JackpotRewardTier.MajorJackpot))
+            {
+                return;
+            }
+
+            var symbol = result.Symbol1.ToString();
+            if (!Profile.discoveredJackpotTriples.Contains(symbol))
+            {
+                Profile.discoveredJackpotTriples.Add(symbol);
+                Persistence.MetaProfileService.Save(profile);
+            }
         }
 
         public void RevealPendingJackpotSpinResult()
