@@ -290,9 +290,9 @@ namespace DomiNox.Tests.EditMode
             var ids = choices.Cast<object>().Select(choice => GetString(choice, "Id")).ToList();
             var rarities = choices.Cast<object>().Select(choice => GetString(GetValue(choice, "Rarity"), null)).ToList();
 
-            Assert.IsFalse(ids.Contains("dominex"));
-            Assert.IsFalse(ids.Contains("reroll_dominex"));
-            Assert.IsFalse(rarities.Contains("Cursed"));
+            Assert.IsFalse(ids.Contains("dominex"), "Le DomiNex possede ne doit pas etre propose");
+            // reroll_dominex est desormais une carte valide (effet FreeFirstShopReroll) donc proposable.
+            Assert.IsFalse(rarities.Contains("Cursed"), "Les Cursed ne sont pas proposes dans les packs");
             Assert.AreEqual(ids.Count, ids.Distinct().Count());
         }
 
@@ -564,27 +564,30 @@ namespace DomiNox.Tests.EditMode
         [Test]
         public void BlueDominoAddsFifteenTileWhenScored()
         {
+            // Domino 2|5 (somme 7) + pattern par defaut TileHigh (+5 Tile, +1 Mult) + Blue (+15 Tile).
             var score = CalculateSingleModifiedDominoScore("blue");
 
-            Assert.AreEqual(22, GetInt(score, "Count"));
-            Assert.AreEqual(22, GetInt(score, "FinalScore"));
+            Assert.AreEqual(27, GetInt(score, "Count"));
+            Assert.AreEqual(54, GetInt(score, "FinalScore"));
         }
 
         [Test]
         public void RedDominoAddsThreeMultWhenScored()
         {
+            // TileHigh (+1 Mult) + Red (+3 Mult) => Mult 5, Count 12.
             var score = CalculateSingleModifiedDominoScore("red");
 
-            Assert.AreEqual(4, GetInt(score, "Mult"));
-            Assert.AreEqual(28, GetInt(score, "FinalScore"));
+            Assert.AreEqual(5, GetInt(score, "Mult"));
+            Assert.AreEqual(60, GetInt(score, "FinalScore"));
         }
 
         [Test]
         public void GlassDominoDoublesHandScoreWhenScored()
         {
+            // TileHigh => Count 12, Mult 2 ; Glass double le score final => 12*2*2 = 48.
             var score = CalculateSingleModifiedDominoScore("glass");
 
-            Assert.AreEqual(14, GetInt(score, "FinalScore"));
+            Assert.AreEqual(48, GetInt(score, "FinalScore"));
         }
 
         [Test]
@@ -606,7 +609,8 @@ namespace DomiNox.Tests.EditMode
             var placed = ModifiedDomino("light");
             grid.GetType().GetMethod("PlaceDomino").Invoke(grid, new[] { GetValue(placed, "Domino"), GetValue(placed, "Position"), GetValue(placed, "Orientation") });
 
-            Assert.AreEqual(7, GetInt(score, "FinalScore"));
+            // TileHigh => Count 12, Mult 2 ; Light applique -2 Mult (clamp a 1) => 12*1 = 12.
+            Assert.AreEqual(12, GetInt(score, "FinalScore"));
             Assert.AreEqual(0, T("DomiNox.Run.GameFlowController").GetMethod("CountPlacedAgainstLimit").Invoke(null, new[] { level }));
         }
 
@@ -785,6 +789,35 @@ namespace DomiNox.Tests.EditMode
             T("DomiNox.Jackpot.JackpotSpinService").GetMethod("Spin").Invoke(null, new object[] { state, random });
 
             Assert.AreEqual(0, GetInt(state, "MachineHeat"));
+        }
+
+        [Test]
+        public void DisconnectedRegionsDetectTwoDesignPatterns()
+        {
+            var placed = CreateLoop(1);
+            // A second loop placed far away so it forms a separate connected region (the Faille).
+            placed.Add(Domino("b_top", 2, 2, 0, 10, "HorizontalRight"));
+            placed.Add(Domino("b_right", 2, 2, 2, 10, "VerticalDown"));
+            placed.Add(Domino("b_bottom", 2, 2, 1, 12, "HorizontalRight"));
+            placed.Add(Domino("b_left", 2, 2, 0, 11, "VerticalDown"));
+
+            var detector = Activator.CreateInstance(T("DomiNox.Patterns.PatternDetector"));
+            var method = detector.GetType().GetMethod("DetectPatternInfos", new[] { placed.GetType(), typeof(int) });
+            var result = ((IEnumerable)method.Invoke(detector, new object[] { placed, 9 })).Cast<object>().ToList();
+
+            var loopCount = result.Count(pattern => GetString(pattern, "Id") == TileLoopId);
+            Assert.AreEqual(2, loopCount, "Deux regions en boucle = deux Tile Loop detectes (scoring additif)");
+        }
+
+        [Test]
+        public void SingleConnectedRegionStillDetectsOneDesignPattern()
+        {
+            var result = ((IEnumerable)Activator.CreateInstance(T("DomiNox.Patterns.PatternDetector"))
+                .GetType().GetMethod("DetectPatternInfos", new[] { CreateLoop(1).GetType(), typeof(int) })
+                .Invoke(Activator.CreateInstance(T("DomiNox.Patterns.PatternDetector")), new object[] { CreateLoop(1), 5 }))
+                .Cast<object>().ToList();
+
+            Assert.AreEqual(1, result.Count(pattern => GetString(GetValue(pattern, "Category"), null) == "Design"));
         }
 
         private static object DetectDesign(IList placed)
