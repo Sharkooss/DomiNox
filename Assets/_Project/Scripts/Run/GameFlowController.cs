@@ -8,7 +8,9 @@ using DomiNox.Dominoes;
 using DomiNox.Dominex;
 using DomiNox.Grid;
 using DomiNox.Jackpot;
+using DomiNox.Objectives;
 using DomiNox.Patterns;
+using DomiNox.Persistence;
 using DomiNox.Scoring;
 using DomiNox.Shop;
 using UnityEngine;
@@ -30,6 +32,7 @@ namespace DomiNox.Run
         private int selectedDomiNexIndex = -1;
         private int selectedConsumableIndex = -1;
         private readonly HashSet<DominoInstance> selectedForDiscard = new HashSet<DominoInstance>();
+        private MetaProfile profile;
 
         public event Action<RunState, ScoreResult, string> StateChanged;
 
@@ -51,13 +54,66 @@ namespace DomiNox.Run
         private void Awake()
         {
             scoreCalculator = new ScoreCalculator(patternDetector, dominexEffectEngine);
-            InitializeRun();
+            profile = Persistence.MetaProfileService.Load();
+            if (!TryLoadSavedRun())
+            {
+                InitializeRun();
+            }
+        }
+
+        public MetaProfile Profile => profile ??= Persistence.MetaProfileService.Load();
+
+        // Copies what the player has unlocked (from the cross-run profile) onto the active run,
+        // and tells the shop which locked DomiNex are now allowed.
+        private void ApplyProfileToRun()
+        {
+            var loaded = Profile;
+            Run.UnlockedDomiNexIds.Clear();
+            foreach (var id in loaded.unlockedDomiNexIds)
+            {
+                Run.UnlockedDomiNexIds.Add(id);
+            }
+
+            Run.EndlessUnlocked = loaded.endlessUnlocked;
+            shopService.SetUnlockedDomiNexIds(Run.UnlockedDomiNexIds);
+        }
+
+        // Restores a previously saved in-progress run, if any. Returns false on no save / corrupt save.
+        public bool TryLoadSavedRun()
+        {
+            if (!Persistence.RunSaveService.TryLoad(out var data))
+            {
+                return false;
+            }
+
+            try
+            {
+                Run = new RunState { CurrentLevel = new LevelState() };
+                Run.DomiNexInventory.SetActive(Array.Empty<DomiNexDefinition>());
+                Persistence.RunSaveMapper.Apply(data, Run);
+                ApplyProfileToRun();
+                selectedDomiNexIndex = -1;
+                selectedConsumableIndex = -1;
+                lastScoreResult = new ScoreResult(0, 1, new System.Collections.Generic.List<string>(), new System.Collections.Generic.List<string> { "Run restauree." });
+
+                // Rebuild the FloorProgress level for the saved level, preserving the restored boss.
+                Run.CurrentLevel = new LevelState { FloorIndex = data.floorIndex };
+                OpenFloorProgress(data.levelIndex);
+                Notify("Run restauree.");
+                return true;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"GameFlowController: failed to restore run ({exception.Message}). Starting fresh.");
+                return false;
+            }
         }
 
         public void InitializeRun()
         {
             Run = new RunState { CurrentLevel = new LevelState() };
             Run.DomiNexInventory.SetActive(Array.Empty<DomiNexDefinition>());
+            ApplyProfileToRun();
             selectedDomiNexIndex = -1;
             selectedConsumableIndex = -1;
             dominexEffectEngine.ApplyRunStart(Run.DomiNexInventory, Run, null);
@@ -321,7 +377,7 @@ namespace DomiNox.Run
 
             var dominexContext = CreateScoringContext(level);
             var score = scoreCalculator.Calculate(level.Grid.GetPlacedDominoes(), level.MaxPlacedDominoes, dominexContext, level.Boss);
-            lastScoreResult = score.WithPostScoringEffects(RollPostScoringDomiNexEffects(score));
+            lastScoreResult = score.WithPostScoringEffects(dominexEffectEngine.RollPostScoringEffects(Run.DomiNexInventory, score.ValuePatternId, score.ValuePatternName));
             IsScoring = true;
             selectedDomino = null;
             selectedForDiscard.Clear();
@@ -348,8 +404,9 @@ namespace DomiNox.Run
             var jackpotGain = JackpotMeterService.ApplyScoringGains(Run, lastScoreResult, placedDominoes, secretUnlocked, random, scoreBeforeHand, level.CurrentScore);
             jackpotGain += ApplyDominoModifierPostScoringEffects(lastScoreResult, level.IsWon);
             var jackpotMessage = jackpotGain <= 0 ? string.Empty : $" Jackpot +{jackpotGain}.";
-            ApplyPostScoringDomiNexEffects(lastScoreResult);
+            dominexEffectEngine.ApplyPostScoringResults(Run.DomiNexInventory, lastScoreResult.PostScoringEffects, Run.PatternLevels);
             level.IsWon = level.CurrentScore >= level.Quota;
+            EvaluateObjectives(BuildHandObjectiveContext(level, placedDominoes));
             foreach (var placed in placedDominoes)
             {
                 level.PlayedThisLevel.Add(placed.Domino);
@@ -359,6 +416,7 @@ namespace DomiNox.Run
             if (level.IsWon)
             {
                 AdvanceJackpotLevelEffects();
+                dominexEffectEngine.ApplyLevelWon(Run.DomiNexInventory, Run, null);
                 var goldCredits = AwardGoldDominoCredits(level);
                 OpenLevelReward();
                 Notify($"Niveau reussi. Score {level.CurrentScore}/{level.Quota}. Cash out disponible.{(goldCredits > 0 ? $" Gold +{goldCredits} credits." : string.Empty)}{secretMessage}{jackpotMessage}");
@@ -369,12 +427,53 @@ namespace DomiNox.Run
             {
                 level.IsLost = true;
                 Run.Phase = RunPhase.RunLost;
+                Persistence.MetaProfileService.Save(Persistence.MetaProfileService.RecordFromRun(Run, Profile));
+                Persistence.RunSaveService.Delete();
                 Notify($"Score insuffisant: {level.CurrentScore}/{level.Quota}.{secretMessage}{jackpotMessage}");
                 return;
             }
 
             PrepareNextHand(level);
             Notify($"Main score +{lastScoreResult.FinalScore}. Total {level.CurrentScore}/{level.Quota}. {level.HandsRemaining} hand(s) left.{secretMessage}{jackpotMessage}");
+        }
+
+        private ObjectiveProgressContext BuildHandObjectiveContext(LevelState level, List<PlacedDomino> placedDominoes)
+        {
+            var designThisHand = patternDetector
+                .DetectPatternInfos(placedDominoes, level.MaxPlacedDominoes, null)
+                .Count(pattern => pattern.Category == PatternCategory.Design);
+
+            return new ObjectiveProgressContext
+            {
+                HandScore = lastScoreResult.FinalScore,
+                DesignPatternsThisHand = designThisHand,
+                OwnedDomiNexCount = Run.ActiveDomiNexCount,
+                WonBossWithoutDiscard = level.IsWon && level.Boss != null && level.DiscardsUsed == 0,
+                FloorReached = level.IsWon && level.Boss != null ? level.FloorIndex : 0
+            };
+        }
+
+        // Evaluates unlock objectives, applies any new unlocks to the active run, and persists the profile.
+        // Note: does NOT flip Run.EndlessUnlocked mid-run; the floor-3 gate uses the run-start snapshot.
+        private void EvaluateObjectives(ObjectiveProgressContext context)
+        {
+            var newlyCompleted = ObjectiveService.Evaluate(Profile, context);
+            if (newlyCompleted.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var objective in newlyCompleted)
+            {
+                if (!string.IsNullOrWhiteSpace(objective.RewardDomiNexId))
+                {
+                    Run.UnlockedDomiNexIds.Add(objective.RewardDomiNexId);
+                }
+            }
+
+            shopService.SetUnlockedDomiNexIds(Run.UnlockedDomiNexIds);
+            Persistence.MetaProfileService.Save(profile);
+            Notify($"Objectif accompli: {string.Join(", ", newlyCompleted.Select(objective => objective.Name))} !");
         }
 
         public void CashOutReward()
@@ -852,8 +951,27 @@ namespace DomiNox.Run
 
             Run.NextShopInfiniteFreeRerolls = false;
             Run.NextShopFreeReroll = false;
-            OpenFloorProgress(Run.CurrentLevel.LevelIndex + 1);
+
+            var nextLevelIndex = Run.CurrentLevel.LevelIndex + 1;
+            if (!Run.EndlessUnlocked && GetFloorIndex(nextLevelIndex) > EndlessGateFloor)
+            {
+                WinRun();
+                return;
+            }
+
+            OpenFloorProgress(nextLevelIndex);
             Notify($"Etage {Run.CurrentLevel.FloorIndex}: prochaine table disponible.");
+        }
+
+        // Until the Faille (le_schisme) is unlocked, the run caps at floor 3 with a victory screen.
+        private const int EndlessGateFloor = 3;
+
+        private void WinRun()
+        {
+            Run.Phase = RunPhase.RunWon;
+            Persistence.MetaProfileService.Save(Persistence.MetaProfileService.RecordFromRun(Run, Profile));
+            Persistence.RunSaveService.Delete();
+            Notify("Boucle 1 completee ! Le Schisme est debloque. Les etages superieurs s'ouvrent a toi.");
         }
 
         public void RerollShop()
@@ -921,6 +1039,11 @@ namespace DomiNox.Run
         private void OpenShop()
         {
             Run.CurrentShop = shopService.GenerateShop(Run.DomiNexInventory, Run.CurrentLevel.FloorIndex, Run);
+            if (dominexEffectEngine.GrantsFreeFirstShopReroll(Run.DomiNexInventory))
+            {
+                Run.NextShopFreeReroll = true;
+            }
+
             Run.CurrentReward = null;
             Run.Phase = RunPhase.Shop;
         }
@@ -963,6 +1086,10 @@ namespace DomiNox.Run
             selectedConsumableIndex = -1;
             OpenBoosterPack = null;
             BossIntroActive = false;
+
+            // FloorProgress is a stable checkpoint: persist the run so it can be resumed.
+            Persistence.RunSaveService.Save(Run);
+            Persistence.MetaProfileService.Save(Persistence.MetaProfileService.RecordFromRun(Run, Profile));
         }
 
         private void StartLevel(int levelIndex)
@@ -995,7 +1122,8 @@ namespace DomiNox.Run
             CurrentOrientation = DominoOrientation.HorizontalRight;
             BossIntroActive = bossDefinition != null;
 
-            dominexEffectEngine.ApplyLevelStart(Run.DomiNexInventory, Run.CurrentLevel, null);
+            dominexEffectEngine.ApplyLevelStart(Run.DomiNexInventory, Run.CurrentLevel, Run, null);
+            Run.CurrentLevel.Grid.MaxClusters = Run.CurrentLevel.MaxClusters;
             ApplyBossLevelStart(Run.CurrentLevel);
             Run.Bag.Initialize(CreateRunDominoSet());
 
@@ -1181,31 +1309,14 @@ namespace DomiNox.Run
 
         private DomiNexScoringContext CreateScoringContext(LevelState level)
         {
-            return new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.DiscardsRemaining, level.MaxPlacedDominoes, patternUsageCounts: Run.PatternUsage.Counts, patternLevels: Run.PatternLevels.Levels, activeDomiNexCount: Run.ActiveDomiNexCount, maxDomiNexSlots: Run.MaxDomiNexSlots, bagDoubleCount: CountDeckDoubles(level));
+            return new DomiNexScoringContext(Run.DomiNexInventory.Active, Run.Credits, level.DiscardsUsed, level.DiscardsRemaining, level.MaxPlacedDominoes, patternUsageCounts: Run.PatternUsage.Counts, patternLevels: Run.PatternLevels.Levels, activeDomiNexCount: Run.ActiveDomiNexCount, maxDomiNexSlots: Run.MaxDomiNexSlots, bagDoubleCount: CountDeckDoubles(level), jackpotMeter: Run.Jackpot.Meter, maxJackpotMeter: Run.Jackpot.MaxMeter, jackpotSpinTickets: Run.Jackpot.SpinTickets, machineHeat: Run.Jackpot.MachineHeat);
         }
 
         public int GetMinimumAllowedCredits()
         {
-            return Run.DomiNexInventory.Contains("credit_dominex") ? -20 : 0;
+            return dominexEffectEngine.GetMinimumCreditFloor(Run.DomiNexInventory);
         }
 
-        private List<PostScoringEffectResult> RollPostScoringDomiNexEffects(ScoreResult score)
-        {
-            var results = new List<PostScoringEffectResult>();
-            if (Run.DomiNexInventory.Contains("space_dominex") && !string.IsNullOrWhiteSpace(score.ValuePatternId))
-            {
-                var triggered = ChanceUtils.RollChance(1, 4);
-                results.Add(new PostScoringEffectResult("space_dominex", "Space Dominex", triggered ? $"{score.ValuePatternName} level up" : "No level up", triggered, score.ValuePatternId));
-            }
-
-            if (Run.DomiNexInventory.Contains("gros_michel"))
-            {
-                var triggered = ChanceUtils.RollChance(1, 6);
-                results.Add(new PostScoringEffectResult("gros_michel", "Gros Michel", triggered ? "Destroyed" : "Survived", triggered));
-            }
-
-            return results;
-        }
 
         private string RevealSecretPatterns(ScoreResult score)
         {
@@ -1222,25 +1333,6 @@ namespace DomiNox.Run
             return null;
         }
 
-        private void ApplyPostScoringDomiNexEffects(ScoreResult score)
-        {
-            foreach (var effect in score.PostScoringEffects)
-            {
-                if (!effect.Triggered)
-                {
-                    continue;
-                }
-
-                if (effect.SourceId == "space_dominex")
-                {
-                    Run.PatternLevels.Increase(effect.PatternId);
-                }
-                else if (effect.SourceId == "gros_michel")
-                {
-                    Run.DomiNexInventory.Remove("gros_michel");
-                }
-            }
-        }
 
         private int CountDeckDoubles(LevelState level)
         {

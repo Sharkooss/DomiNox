@@ -13,6 +13,7 @@ namespace DomiNox.Jackpot
         QuotaOver100,
         SecretPatternUnlocked,
         DominoModifier,
-        MeterRefund
+        MeterRefund,
+        DomiNexEffect
     }
 }

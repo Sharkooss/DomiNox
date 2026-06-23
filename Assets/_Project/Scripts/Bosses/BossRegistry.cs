@@ -45,8 +45,29 @@ namespace DomiNox.Bosses
                 "Le sabot choisit ce que tu gardes.",
                 1.20f,
                 BossRuleType.LockHandDominoes,
-                lockedDominoCount: 2)
+                lockedDominoCount: 2),
+            new BossDefinition(
+                "the_tightrope",
+                "Le Funambule",
+                "Tu commences ce niveau avec 2 discards en moins.",
+                "Aucun filet sous cette table.",
+                1.30f,
+                BossRuleType.ModifyDiscards,
+                discardsDelta: -2),
+            new BossDefinition(
+                "line_breaker",
+                "Le Brise-Ligne",
+                "Les patterns Tile Line et Cross Tile ne donnent aucun bonus pendant ce niveau.",
+                "Les lignes se brisent ici.",
+                1.20f,
+                BossRuleType.DisablePatterns,
+                disabledPatternIds: new[] { "tile_line", "cross_tile" })
         };
+
+        public static BossDefinition GetById(string id)
+        {
+            return string.IsNullOrWhiteSpace(id) ? null : System.Array.Find(DemoBosses, boss => boss.Id == id);
+        }
 
         public static BossDefinition GetForLevel(int levelIndex, System.Random random = null, string previousBossId = null)
         {

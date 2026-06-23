@@ -23,6 +23,8 @@ namespace DomiNox.Run
         public PatternUsageState PatternUsage { get; } = new PatternUsageState();
         public PatternLevelState PatternLevels { get; } = new PatternLevelState();
         public HashSet<string> RevealedSecretPatterns { get; } = new HashSet<string>();
+        public HashSet<string> UnlockedDomiNexIds { get; } = new HashSet<string>();
+        public bool EndlessUnlocked { get; set; }
         public LevelState CurrentLevel { get; set; }
         public ShopState CurrentShop { get; set; }
         public LevelRewardState CurrentReward { get; set; }

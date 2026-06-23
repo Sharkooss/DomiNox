@@ -17,9 +17,13 @@ namespace DomiNox.Dominex
         public int ActiveDomiNexCount { get; }
         public int MaxDomiNexSlots { get; }
         public int BagDoubleCount { get; }
+        public int JackpotMeter { get; }
+        public int MaxJackpotMeter { get; }
+        public int JackpotSpinTickets { get; }
+        public int MachineHeat { get; }
         public BossLevelState Boss { get; }
 
-        public DomiNexScoringContext(IReadOnlyList<DomiNexDefinition> activeDomiNex, int credits, int discardsUsed, int discardsRemaining, int maxPlacedDominoes, IReadOnlyList<PatternInfo> detectedPatterns = null, BossLevelState boss = null, IReadOnlyDictionary<string, int> patternUsageCounts = null, IReadOnlyDictionary<string, int> patternLevels = null, int activeDomiNexCount = 0, int maxDomiNexSlots = 0, int bagDoubleCount = 0)
+        public DomiNexScoringContext(IReadOnlyList<DomiNexDefinition> activeDomiNex, int credits, int discardsUsed, int discardsRemaining, int maxPlacedDominoes, IReadOnlyList<PatternInfo> detectedPatterns = null, BossLevelState boss = null, IReadOnlyDictionary<string, int> patternUsageCounts = null, IReadOnlyDictionary<string, int> patternLevels = null, int activeDomiNexCount = 0, int maxDomiNexSlots = 0, int bagDoubleCount = 0, int jackpotMeter = 0, int maxJackpotMeter = 0, int jackpotSpinTickets = 0, int machineHeat = 0)
         {
             ActiveDomiNex = activeDomiNex;
             Credits = credits;
@@ -32,12 +36,16 @@ namespace DomiNox.Dominex
             ActiveDomiNexCount = activeDomiNexCount;
             MaxDomiNexSlots = maxDomiNexSlots;
             BagDoubleCount = bagDoubleCount;
+            JackpotMeter = jackpotMeter;
+            MaxJackpotMeter = maxJackpotMeter;
+            JackpotSpinTickets = jackpotSpinTickets;
+            MachineHeat = machineHeat;
             Boss = boss;
         }
 
         public DomiNexScoringContext WithDetectedPatterns(IReadOnlyList<PatternInfo> detectedPatterns, BossLevelState boss)
         {
-            return new DomiNexScoringContext(ActiveDomiNex, Credits, DiscardsUsed, DiscardsRemaining, MaxPlacedDominoes, detectedPatterns, boss, PatternUsageCounts, PatternLevels, ActiveDomiNexCount, MaxDomiNexSlots, BagDoubleCount);
+            return new DomiNexScoringContext(ActiveDomiNex, Credits, DiscardsUsed, DiscardsRemaining, MaxPlacedDominoes, detectedPatterns, boss, PatternUsageCounts, PatternLevels, ActiveDomiNexCount, MaxDomiNexSlots, BagDoubleCount, JackpotMeter, MaxJackpotMeter, JackpotSpinTickets, MachineHeat);
         }
 
         public int GetPatternLevel(string patternId)

@@ -6,6 +6,7 @@ namespace DomiNox.Run
         PlayingLevel,
         LevelReward,
         Shop,
-        RunLost
+        RunLost,
+        RunWon
     }
 }

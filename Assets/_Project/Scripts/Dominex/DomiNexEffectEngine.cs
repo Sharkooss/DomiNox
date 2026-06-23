@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
+using DomiNox.Core;
 using DomiNox.Grid;
+using DomiNox.Jackpot;
 using DomiNox.Patterns;
 using DomiNox.Run;
 using DomiNox.Scoring;
@@ -23,14 +25,105 @@ namespace DomiNox.Dominex
 
         public void ApplyLevelStart(DomiNexInventory inventory, LevelState level, List<string> breakdown)
         {
+            ApplyLevelStart(inventory, level, null, breakdown);
+        }
+
+        public void ApplyLevelStart(DomiNexInventory inventory, LevelState level, RunState run, List<string> breakdown)
+        {
             foreach (var effect in GetEffects(inventory, DomiNexTrigger.LevelStart))
             {
-                if (effect.Type == DomiNexEffectType.AddMaxPlacedDominoes)
+                switch (effect.Type)
                 {
-                    level.MaxPlacedDominoes += effect.Value;
-                    breakdown?.Add($"DomiNex: {effect.Value:+#;-#;0} domino jouable");
+                    case DomiNexEffectType.AddMaxPlacedDominoes:
+                        level.MaxPlacedDominoes += effect.Value;
+                        breakdown?.Add($"DomiNex: {effect.Value:+#;-#;0} domino jouable");
+                        break;
+                    case DomiNexEffectType.AddMaxClusters:
+                        level.MaxClusters += effect.Value;
+                        breakdown?.Add($"DomiNex: {effect.Value:+#;-#;0} region");
+                        break;
+                    case DomiNexEffectType.AddDiscardsThisLevel:
+                        level.MaxDiscards += effect.Value;
+                        level.DiscardsRemaining += effect.Value;
+                        breakdown?.Add($"DomiNex: {effect.Value:+#;-#;0} discard");
+                        break;
+                    case DomiNexEffectType.AddCredits:
+                        if (run != null)
+                        {
+                            run.Credits += effect.Value;
+                            breakdown?.Add($"DomiNex: {effect.Value:+#;-#;0} credits");
+                        }
+                        break;
+                    case DomiNexEffectType.AddJackpotLuck:
+                        if (run != null)
+                        {
+                            run.Jackpot.JackpotLuck = System.Math.Min(5, run.Jackpot.JackpotLuck + effect.Value);
+                            breakdown?.Add($"DomiNex: +{effect.Value} Jackpot Luck");
+                        }
+                        break;
+                    case DomiNexEffectType.AddMachineHeat:
+                        if (run != null)
+                        {
+                            run.Jackpot.MachineHeat += effect.Value;
+                            breakdown?.Add($"DomiNex: +{effect.Value} Heat");
+                        }
+                        break;
+                    case DomiNexEffectType.AddSpinTickets:
+                        if (run != null)
+                        {
+                            run.Jackpot.SpinTickets += effect.Value;
+                            breakdown?.Add($"DomiNex: +{effect.Value} Spin");
+                        }
+                        break;
+                    case DomiNexEffectType.AddJackpotMeterFlat:
+                        if (run != null)
+                        {
+                            JackpotMeterService.AddJackpotMeter(run, effect.Value, JackpotGainSource.DomiNexEffect);
+                            breakdown?.Add($"DomiNex: +{effect.Value} Jackpot Meter");
+                        }
+                        break;
+                    case DomiNexEffectType.ReduceMaxJackpotMeter:
+                        if (run != null)
+                        {
+                            run.Jackpot.MaxMeter = System.Math.Max(20, run.Jackpot.MaxMeter - effect.Value);
+                            breakdown?.Add($"DomiNex: -{effect.Value} Max Meter");
+                        }
+                        break;
                 }
             }
+        }
+
+        public void ApplyLevelWon(DomiNexInventory inventory, RunState run, List<string> breakdown)
+        {
+            if (run == null)
+            {
+                return;
+            }
+
+            foreach (var effect in GetEffects(inventory, DomiNexTrigger.LevelWon))
+            {
+                switch (effect.Type)
+                {
+                    case DomiNexEffectType.AddCredits:
+                        run.Credits += effect.Value;
+                        breakdown?.Add($"DomiNex: {effect.Value:+#;-#;0} credits");
+                        break;
+                    case DomiNexEffectType.AddJackpotMeterOnWin:
+                        JackpotMeterService.AddJackpotMeter(run, effect.Value, JackpotGainSource.DomiNexEffect);
+                        breakdown?.Add($"DomiNex: +{effect.Value} Jackpot Meter");
+                        break;
+                    case DomiNexEffectType.AddSpinTicketsOnWin:
+                        run.Jackpot.SpinTickets += effect.Value;
+                        breakdown?.Add($"DomiNex: +{effect.Value} Spin");
+                        break;
+                }
+            }
+        }
+
+        public bool GrantsFreeFirstShopReroll(DomiNexInventory inventory)
+        {
+            return inventory.Active.Any(definition => definition.Effects.Any(effect =>
+                effect.Trigger == DomiNexTrigger.Passive && effect.Type == DomiNexEffectType.FreeFirstShopReroll));
         }
 
         public void ApplyScoringEffects(List<PlacedDomino> placedDominoes, DomiNexScoringContext context, ref int count, ref int mult, ref float finalScoreMultiplier, List<string> breakdown)
@@ -60,6 +153,75 @@ namespace DomiNox.Dominex
             return inventory.Active.Any(definition => definition.Id == id);
         }
 
+        public List<PostScoringEffectResult> RollPostScoringEffects(DomiNexInventory inventory, string valuePatternId, string valuePatternName)
+        {
+            var results = new List<PostScoringEffectResult>();
+
+            foreach (var definition in inventory.Active)
+            {
+                foreach (var effect in definition.Effects.Where(e => e.Trigger == DomiNexTrigger.PostScoring))
+                {
+                    if (effect.Type == DomiNexEffectType.ChancePatternLevelUp)
+                    {
+                        if (string.IsNullOrWhiteSpace(valuePatternId))
+                        {
+                            continue;
+                        }
+
+                        var triggered = ChanceUtils.RollChance(effect.Value, effect.Threshold);
+                        results.Add(new PostScoringEffectResult(definition.Id, definition.Name, triggered ? $"{valuePatternName} level up" : "No level up", triggered, valuePatternId, PostScoringActionType.PatternLevelUp));
+                    }
+                    else if (effect.Type == DomiNexEffectType.ChanceDestroySelf)
+                    {
+                        var triggered = ChanceUtils.RollChance(effect.Value, effect.Threshold);
+                        results.Add(new PostScoringEffectResult(definition.Id, definition.Name, triggered ? "Destroyed" : "Survived", triggered, actionType: PostScoringActionType.DestroySelf));
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        public void ApplyPostScoringResults(DomiNexInventory inventory, IReadOnlyList<PostScoringEffectResult> results, PatternLevelState patternLevels)
+        {
+            if (results == null)
+            {
+                return;
+            }
+
+            foreach (var result in results)
+            {
+                if (!result.Triggered)
+                {
+                    continue;
+                }
+
+                if (result.ActionType == PostScoringActionType.PatternLevelUp && !string.IsNullOrWhiteSpace(result.PatternId))
+                {
+                    patternLevels.Increase(result.PatternId);
+                }
+                else if (result.ActionType == PostScoringActionType.DestroySelf)
+                {
+                    inventory.Remove(result.SourceId);
+                }
+            }
+        }
+
+        public int GetMinimumCreditFloor(DomiNexInventory inventory)
+        {
+            var floor = 0;
+
+            foreach (var definition in inventory.Active)
+            {
+                foreach (var effect in definition.Effects.Where(e => e.Trigger == DomiNexTrigger.Passive && e.Type == DomiNexEffectType.SetMinimumCreditFloor))
+                {
+                    floor = System.Math.Min(floor, -effect.Value);
+                }
+            }
+
+            return floor;
+        }
+
         private static IEnumerable<DomiNexEffectDefinition> GetEffects(DomiNexInventory inventory, DomiNexTrigger trigger)
         {
             return inventory.Active.SelectMany(definition => definition.Effects).Where(effect => effect.Trigger == trigger);
@@ -68,7 +230,12 @@ namespace DomiNox.Dominex
         private static bool IsMultiplicative(DomiNexEffectType type)
         {
             return type == DomiNexEffectType.MultiplyMultByFreeDomiNexSlots
+                || type == DomiNexEffectType.MultiplyMultByPlacedDominoes
+                || type == DomiNexEffectType.MultiplyMultByDoubleCount
+                || type == DomiNexEffectType.MultiplyMultBySpinTickets
+                || type == DomiNexEffectType.MultiplyMultByActiveDomiNex
                 || type == DomiNexEffectType.AddFinalMultiplierByBagDoubleCount
+                || type == DomiNexEffectType.AddFinalMultiplierPerSpinTicket
                 || type == DomiNexEffectType.AddFinalMultiplierIfValueAndDesignPattern
                 || type == DomiNexEffectType.AddFinalMultiplierIfFullPlacedElseMultPenalty;
         }
@@ -365,6 +532,60 @@ namespace DomiNox.Dominex
                     finalScoreMultiplier *= multiplier;
                     AddLine(breakdown, dominex, $"x{multiplier:0.##} score final");
                     break;
+                case DomiNexEffectType.MultiplyMultByPlacedDominoes:
+                    var placedFactor = System.Math.Max(1, placedDominoes.Count);
+                    mult *= placedFactor;
+                    AddLine(breakdown, dominex, $"x{placedFactor} Mult");
+                    break;
+                case DomiNexEffectType.AddMultPerActiveDomiNex:
+                    ApplyPerDominoMult(dominex, System.Math.Max(0, context.ActiveDomiNexCount - 1), effect.Value, ref mult, breakdown);
+                    break;
+                case DomiNexEffectType.AddMultPerActiveDomiNexWithTag:
+                    ApplyPerDominoMult(dominex, CountOtherDomiNexWithTag(dominex, context, effect.Note), effect.Value, ref mult, breakdown);
+                    break;
+                case DomiNexEffectType.AddCountPerActiveDomiNexWithTag:
+                    ApplyPerDominoCount(dominex, CountOtherDomiNexWithTag(dominex, context, effect.Note), effect.Value, ref count, breakdown);
+                    break;
+                case DomiNexEffectType.AddMultPerValuePatternLevel:
+                    var valuePattern = context.DetectedPatterns.FirstOrDefault(pattern => pattern.Category == PatternCategory.Value);
+                    if (valuePattern != null)
+                    {
+                        ApplyPerDominoMult(dominex, System.Math.Max(0, context.GetPatternLevel(valuePattern.Id) - 1), effect.Value, ref mult, breakdown);
+                    }
+                    break;
+                case DomiNexEffectType.MultiplyMultByDoubleCount:
+                    var doubleFactor = System.Math.Max(1, placedDominoes.Count(placed => placed.Domino.Definition.IsDouble));
+                    mult *= doubleFactor;
+                    AddLine(breakdown, dominex, $"x{doubleFactor} Mult");
+                    break;
+                case DomiNexEffectType.AddMultPerSpinTicket:
+                    ApplyPerDominoMult(dominex, context.JackpotSpinTickets, effect.Value, ref mult, breakdown);
+                    break;
+                case DomiNexEffectType.AddMultPerHeat:
+                    ApplyPerDominoMult(dominex, context.MachineHeat, effect.Value, ref mult, breakdown);
+                    break;
+                case DomiNexEffectType.AddMultPerJackpotMeterStep:
+                    var meterSteps = effect.Threshold <= 0 ? 0 : context.JackpotMeter / effect.Threshold;
+                    ApplyPerDominoMult(dominex, meterSteps, effect.Value, ref mult, breakdown);
+                    break;
+                case DomiNexEffectType.AddFinalMultiplierPerSpinTicket:
+                    if (context.JackpotSpinTickets > 0)
+                    {
+                        var ticketMultiplier = 1f + ((effect.Value / 100f) * context.JackpotSpinTickets);
+                        finalScoreMultiplier *= ticketMultiplier;
+                        AddLine(breakdown, dominex, $"x{ticketMultiplier:0.##} score final");
+                    }
+                    break;
+                case DomiNexEffectType.MultiplyMultBySpinTickets:
+                    var ticketFactor = System.Math.Max(1, context.JackpotSpinTickets);
+                    mult *= ticketFactor;
+                    AddLine(breakdown, dominex, $"x{ticketFactor} Mult");
+                    break;
+                case DomiNexEffectType.MultiplyMultByActiveDomiNex:
+                    var domiNexFactor = System.Math.Max(1, context.ActiveDomiNexCount);
+                    mult *= domiNexFactor;
+                    AddLine(breakdown, dominex, $"x{domiNexFactor} Mult");
+                    break;
             }
 
             AddDomiNexSteps(dominex, count - beforeCount, mult - beforeMult, finalScoreMultiplier / beforeMultiplier, steps, ref order);
@@ -433,6 +654,16 @@ namespace DomiNox.Dominex
 
             mult += bonus;
             AddLine(breakdown, dominex, $"{bonus:+#;-#;0} Mult");
+        }
+
+        private static int CountOtherDomiNexWithTag(DomiNexDefinition self, DomiNexScoringContext context, string tag)
+        {
+            if (string.IsNullOrWhiteSpace(tag) || context.ActiveDomiNex == null)
+            {
+                return 0;
+            }
+
+            return context.ActiveDomiNex.Count(definition => definition != self && definition.Tags.Contains(tag));
         }
 
         private static void AddLine(List<string> breakdown, DomiNexDefinition dominex, string text)

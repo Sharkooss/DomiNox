@@ -31,5 +31,16 @@ namespace DomiNox.Run
         {
             return !string.IsNullOrWhiteSpace(patternName) && counts.TryGetValue(patternName, out var count) ? count : 0;
         }
+
+        // Restores an absolute usage count from a save.
+        public void Restore(string patternName, int count)
+        {
+            if (string.IsNullOrWhiteSpace(patternName) || count <= 0)
+            {
+                return;
+            }
+
+            counts[patternName] = count;
+        }
     }
 }

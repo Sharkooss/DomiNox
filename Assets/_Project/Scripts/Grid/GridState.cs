@@ -9,6 +9,9 @@ namespace DomiNox.Grid
     {
         private readonly Dictionary<GridPosition, PlacedDomino> occupiedCells = new Dictionary<GridPosition, PlacedDomino>();
         private readonly List<PlacedDomino> placedDominoes = new List<PlacedDomino>();
+
+        // Max number of disconnected regions allowed on the board. 1 by default; raised by the Faille (le_schisme).
+        public int MaxClusters { get; set; } = 1;
         private static readonly GridPosition[] AdjacentOffsets =
         {
             new GridPosition(1, 0),
@@ -38,7 +41,66 @@ namespace DomiNox.Grid
                 }
             }
 
-            return placedDominoes.Count == 0 || HasMatchingAdjacentValue(domino, orientation, cells);
+            if (placedDominoes.Count == 0 || HasMatchingAdjacentValue(domino, orientation, cells))
+            {
+                return true;
+            }
+
+            // Faille: seed a brand new disconnected region, as long as it touches nothing and we are under the cluster cap.
+            return MaxClusters > 1 && !HasAnyOccupiedNeighbor(cells) && CountClusters() < MaxClusters;
+        }
+
+        private bool HasAnyOccupiedNeighbor(IReadOnlyList<GridPosition> cells)
+        {
+            foreach (var cell in cells)
+            {
+                foreach (var offset in AdjacentOffsets)
+                {
+                    if (occupiedCells.ContainsKey(new GridPosition(cell.X + offset.X, cell.Y + offset.Y)))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Counts disconnected regions by flood-filling occupied cells over orthogonal adjacency.
+        public int CountClusters()
+        {
+            var visited = new HashSet<GridPosition>();
+            var clusters = 0;
+            foreach (var start in occupiedCells.Keys)
+            {
+                if (visited.Contains(start))
+                {
+                    continue;
+                }
+
+                clusters++;
+                var stack = new Stack<GridPosition>();
+                stack.Push(start);
+                while (stack.Count > 0)
+                {
+                    var current = stack.Pop();
+                    if (!visited.Add(current))
+                    {
+                        continue;
+                    }
+
+                    foreach (var offset in AdjacentOffsets)
+                    {
+                        var neighbor = new GridPosition(current.X + offset.X, current.Y + offset.Y);
+                        if (occupiedCells.ContainsKey(neighbor) && !visited.Contains(neighbor))
+                        {
+                            stack.Push(neighbor);
+                        }
+                    }
+                }
+            }
+
+            return clusters;
         }
 
         public bool PlaceDomino(DominoInstance domino, GridPosition position, DominoOrientation orientation)

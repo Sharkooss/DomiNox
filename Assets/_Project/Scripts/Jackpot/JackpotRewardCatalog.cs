@@ -32,7 +32,7 @@ namespace DomiNox.Jackpot
             {
                 JackpotSymbol.Coin => Define("pair_coins", "Coin Pair", JackpotRewardType.Credits10, "+10 credits."),
                 JackpotSymbol.Gem => Define("pair_gems", "Gem Pair", JackpotRewardType.JumboGemstonePack, "Open a free Jumbo Gemstone Pack."),
-                JackpotSymbol.Domino => Define("pair_dominoes", "Domino Pair", JackpotRewardType.FutureImprovedDomino, "Future reward: improved domino. +10 credits compensation.", false),
+                JackpotSymbol.Domino => Define("pair_dominoes", "Domino Pair", JackpotRewardType.FutureImprovedDomino, "Add an improved domino to your bag."),
                 JackpotSymbol.DomiNex => Define("pair_dominex", "DomiNex Pair", JackpotRewardType.NextShopFreeDomiNex, "Next shop has one free DomiNex."),
                 JackpotSymbol.Crown => Define("pair_crowns", "Crown Pair", JackpotRewardType.NextShopDiscount, "Next shop first purchase -50%."),
                 JackpotSymbol.Skull => Define("pair_skulls", "Skull Pair", JackpotRewardType.SkullCreditsQuota, "+20 credits, next quota +10%."),
@@ -47,10 +47,10 @@ namespace DomiNox.Jackpot
             {
                 JackpotSymbol.Coin => Define("triple_coins", "Triple Coins", JackpotRewardType.Credits30, "+30 credits."),
                 JackpotSymbol.Gem => Define("triple_gems", "Triple Gems", JackpotRewardType.MegaGemstonePackAndPatternLevels, "Open a free Mega Pack and add +5 levels to most played patterns."),
-                JackpotSymbol.Domino => Define("triple_dominoes", "Triple Dominoes", JackpotRewardType.FutureSpecialDominoChoice, "Future reward: special domino choice. +10 credits compensation.", false),
+                JackpotSymbol.Domino => Define("triple_dominoes", "Triple Dominoes", JackpotRewardType.FutureSpecialDominoChoice, "Add a special modified domino to your bag."),
                 JackpotSymbol.DomiNex => Define("triple_dominex", "Triple DomiNex", JackpotRewardType.LegendaryDomiNexChoice, "Free Legendary DomiNex or +20 credits if unavailable/full."),
                 JackpotSymbol.Crown => Define("triple_crowns", "Triple Crowns", JackpotRewardType.ExtraSlots, "+1 DomiNex slot and +1 consumable slot."),
-                JackpotSymbol.Skull => Define("triple_skulls", "Triple Skulls", JackpotRewardType.CursedDomiNexPlaceholder, "Cursed DomiNex reward not implemented. +30 credits.", false),
+                JackpotSymbol.Skull => Define("triple_skulls", "Triple Skulls", JackpotRewardType.CursedDomiNexPlaceholder, "Gain a Cursed DomiNex (or +30 credits if unavailable)."),
                 JackpotSymbol.Seven => Define("major_777", "MAJOR JACKPOT", JackpotRewardType.MajorCasinoCredit, "Choose 2 major rewards."),
                 _ => ConsolationRewards[0]
             };

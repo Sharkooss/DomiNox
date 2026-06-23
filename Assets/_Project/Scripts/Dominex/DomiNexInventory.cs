@@ -30,6 +30,18 @@ namespace DomiNox.Dominex
             slots.AddRange(definitions.Where(definition => definition != null).Select(definition => new ActiveDomiNexInstance(definition, 0)));
         }
 
+        // Restores the exact slot layout (including empty slots represented by null) from a save.
+        public void RestoreSlots(IEnumerable<ActiveDomiNexInstance> instances)
+        {
+            slots.Clear();
+            if (instances != null)
+            {
+                slots.AddRange(instances);
+            }
+
+            TrimTrailingEmptySlots();
+        }
+
         public bool Add(DomiNexDefinition definition)
         {
             return Add(definition, 0);

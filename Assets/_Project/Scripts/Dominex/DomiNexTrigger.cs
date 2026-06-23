@@ -6,6 +6,8 @@ namespace DomiNox.Dominex
         LevelStart,
         LevelWon,
         RunStart,
+        PostScoring,
+        Passive,
         FutureHook
     }
 }

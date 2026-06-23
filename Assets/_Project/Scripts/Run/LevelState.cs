@@ -18,6 +18,7 @@ namespace DomiNox.Run
         public int DiscardsRemaining { get; set; } = GameConstants.PhaseOneDiscards;
         public int DiscardsUsed { get; set; }
         public int MaxPlacedDominoes { get; set; } = GameConstants.PhaseOneMaxPlacedDominoes;
+        public int MaxClusters { get; set; } = 1;
         public HandState Hand { get; }
         public GridState Grid { get; }
         public List<DominoInstance> PlayedThisLevel { get; } = new List<DominoInstance>();

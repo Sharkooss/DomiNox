@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DomiNox.Dominex;
 using DomiNox.Consumables;
+using DomiNox.Objectives;
 using DomiNox.Run;
 
 namespace DomiNox.Shop
@@ -14,10 +15,17 @@ namespace DomiNox.Shop
         private const int MaxDirectDominoOffersPerShop = 1;
         private readonly Random random = new Random();
         private readonly ShopPackOfferGenerator packOfferGenerator;
+        private IReadOnlyCollection<string> unlockedDomiNexIds;
 
         public DomiNexShopService()
         {
             packOfferGenerator = new ShopPackOfferGenerator(random);
+        }
+
+        // Set once per run so locked DomiNex (objective rewards) stay out of the shop until unlocked.
+        public void SetUnlockedDomiNexIds(IReadOnlyCollection<string> ids)
+        {
+            unlockedDomiNexIds = ids;
         }
 
         public ShopState GenerateShop(DomiNexInventory inventory, int floorIndex)
@@ -110,11 +118,12 @@ namespace DomiNox.Shop
             };
         }
 
-        private static IEnumerable<DomiNexDefinition> GetAvailableDomiNexPool(DomiNexInventory inventory)
+        private IEnumerable<DomiNexDefinition> GetAvailableDomiNexPool(DomiNexInventory inventory)
         {
             return DomiNexRegistry.All
                 .Where(definition => definition.Rarity != DomiNexRarity.Cursed)
                 .Where(DomiNexRegistry.IsAvailableInPrototypeShop)
+                .Where(definition => DomiNexUnlockService.IsAvailable(definition.Id, unlockedDomiNexIds))
                 .Where(definition => inventory == null || !inventory.Contains(definition.Id));
         }
 

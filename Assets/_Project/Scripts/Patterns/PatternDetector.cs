@@ -46,13 +46,62 @@ namespace DomiNox.Patterns
                 patterns.Add(value);
             }
 
-            var design = DetectBestDesignPattern(placedDominoes, disabled);
-            if (design != null)
-            {
-                patterns.Add(design);
-            }
+            // Design patterns are detected per connected region (component). With a single region this is
+            // identical to before; with the Faille active, each disconnected region adds its own design pattern.
+            patterns.AddRange(DetectDesignPatterns(placedDominoes, disabled));
 
             return patterns;
+        }
+
+        private static List<PatternInfo> DetectDesignPatterns(IReadOnlyCollection<PlacedDomino> placedDominoes, HashSet<string> disabled)
+        {
+            var graph = BuildConnectionGraph(placedDominoes);
+            var results = new List<PatternInfo>();
+            foreach (var component in GetConnectedComponents(placedDominoes, graph))
+            {
+                var pattern = DetectDesignPatternForComponent(component, graph, disabled);
+                if (pattern != null)
+                {
+                    results.Add(pattern);
+                }
+            }
+
+            return results;
+        }
+
+        private static List<List<PlacedDomino>> GetConnectedComponents(IReadOnlyCollection<PlacedDomino> placedDominoes, Dictionary<PlacedDomino, List<DominoConnection>> graph)
+        {
+            var visited = new HashSet<PlacedDomino>();
+            var components = new List<List<PlacedDomino>>();
+            foreach (var start in placedDominoes)
+            {
+                if (visited.Contains(start))
+                {
+                    continue;
+                }
+
+                var component = new List<PlacedDomino>();
+                var stack = new Stack<PlacedDomino>();
+                stack.Push(start);
+                while (stack.Count > 0)
+                {
+                    var current = stack.Pop();
+                    if (!visited.Add(current))
+                    {
+                        continue;
+                    }
+
+                    component.Add(current);
+                    foreach (var connection in graph[current])
+                    {
+                        stack.Push(connection.Other);
+                    }
+                }
+
+                components.Add(component);
+            }
+
+            return components;
         }
 
         private static PatternInfo DetectBestValuePattern(IReadOnlyCollection<PlacedDomino> placedDominoes, HashSet<string> disabled)
@@ -100,9 +149,8 @@ namespace DomiNox.Patterns
                 ?? PatternCatalog.GetById(PatternNames.TileHighId);
         }
 
-        private static PatternInfo DetectBestDesignPattern(IReadOnlyCollection<PlacedDomino> placedDominoes, HashSet<string> disabled)
+        private static PatternInfo DetectDesignPatternForComponent(IReadOnlyCollection<PlacedDomino> placedDominoes, Dictionary<PlacedDomino, List<DominoConnection>> graph, HashSet<string> disabled)
         {
-            var graph = BuildConnectionGraph(placedDominoes);
             if (IsBigLoop(placedDominoes, graph) && !disabled.Contains(PatternNames.BigLoopId))
             {
                 return PatternCatalog.GetById(PatternNames.BigLoopId);

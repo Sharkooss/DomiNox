@@ -37,15 +37,26 @@ namespace DomiNox.Dominex
                     return $"Currently: x{System.Math.Max(1, run.MaxDomiNexSlots - run.ActiveDomiNexCount)} Mult";
                 case "doublish":
                     return $"Currently: x{1f + (0.2f * CountDeckDoubles(run)):0.##}";
-                case "gros_michel":
-                    return "1 in 6 chance to break";
-                case "space_dominex":
-                    return "1 in 4 chance";
-                case "credit_dominex":
-                    return "Debt limit: -20 credits";
-                default:
-                    return string.Empty;
             }
+
+            var postScoringEffect = Effects.FirstOrDefault(e => e.Trigger == DomiNexTrigger.PostScoring);
+            if (postScoringEffect?.Type == DomiNexEffectType.ChanceDestroySelf)
+            {
+                return $"1 in {postScoringEffect.Threshold} chance to break";
+            }
+
+            if (postScoringEffect?.Type == DomiNexEffectType.ChancePatternLevelUp)
+            {
+                return $"1 in {postScoringEffect.Threshold} chance";
+            }
+
+            var passiveFloor = Effects.FirstOrDefault(e => e.Trigger == DomiNexTrigger.Passive && e.Type == DomiNexEffectType.SetMinimumCreditFloor);
+            if (passiveFloor != null)
+            {
+                return $"Debt limit: -{passiveFloor.Value} credits";
+            }
+
+            return string.Empty;
         }
 
         private static int CountDeckDoubles(RunState run)

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using DomiNox.Core;
 using DomiNox.Dominex;
+using DomiNox.Dominoes;
 using DomiNox.Patterns;
 using DomiNox.Run;
 using DomiNox.Shop;
@@ -36,7 +37,7 @@ namespace DomiNox.Jackpot
                     openFreePack?.Invoke(BoosterPackRegistry.GetById("gemstone_pack_jumbo"));
                     return "Free Jumbo Gemstone Pack opened.";
                 case JackpotRewardType.FutureImprovedDomino:
-                    return Credits(run, 10, "Improved domino placeholder");
+                    return AddModifiedDomino(run, random, new[] { DominoModifierRegistry.BlueId, DominoModifierRegistry.RedId, DominoModifierRegistry.GoldId, DominoModifierRegistry.JackpotId }, "Domino Pair");
                 case JackpotRewardType.NextShopFreeDomiNex:
                     run.NextShopHasFreeDomiNex = true;
                     return "Next shop has one free DomiNex.";
@@ -56,7 +57,7 @@ namespace DomiNox.Jackpot
                     openFreePack?.Invoke(BoosterPackRegistry.GetById("gemstone_pack_mega"));
                     return "Free Mega Pack opened. Most played patterns gained +5 total levels.";
                 case JackpotRewardType.FutureSpecialDominoChoice:
-                    return Credits(run, 10, "Special domino placeholder");
+                    return AddModifiedDomino(run, random, new[] { DominoModifierRegistry.LuckyId, DominoModifierRegistry.GlassId, DominoModifierRegistry.RedId }, "Triple Dominoes");
                 case JackpotRewardType.LegendaryDomiNexChoice:
                 case JackpotRewardType.MajorCrownDomiNex:
                     return AddFreeLegendaryOrCredits(run, reward.Type == JackpotRewardType.MajorCrownDomiNex ? 25 : 20);
@@ -66,7 +67,7 @@ namespace DomiNox.Jackpot
                     run.MaxConsumableSlots++;
                     return "+1 DomiNex slot and +1 consumable slot.";
                 case JackpotRewardType.CursedDomiNexPlaceholder:
-                    return Credits(run, 30, "Cursed DomiNex placeholder");
+                    return AddCursedDomiNexOrCredits(run, random, 30);
                 case JackpotRewardType.MajorGemFlood:
                     ApplyVisibleGemUpgrades(run, 3);
                     return "Gem Flood: applied 3 visible Gem Tile upgrades.";
@@ -109,6 +110,29 @@ namespace DomiNox.Jackpot
 
             run.DomiNexInventory.Add(candidates[0], 0);
             return $"Free Legendary DomiNex: {candidates[0].Name}.";
+        }
+
+        private static string AddCursedDomiNexOrCredits(RunState run, Random random, int compensation)
+        {
+            var candidates = DomiNexRegistry.All.Where(definition => definition.Rarity == DomiNexRarity.Cursed && !run.DomiNexInventory.Contains(definition.Id)).ToList();
+            if (!run.HasFreeDomiNexSlot() || candidates.Count == 0)
+            {
+                return Credits(run, compensation, "Cursed DomiNex compensation");
+            }
+
+            var pick = candidates[(random ?? new Random()).Next(candidates.Count)];
+            run.DomiNexInventory.Add(pick, 0);
+            return $"Cursed DomiNex: {pick.Name}.";
+        }
+
+        private static string AddModifiedDomino(RunState run, Random random, string[] modifierPool, string label)
+        {
+            random ??= new Random();
+            var definition = DominoShopOfferService.GenerateRandomShopDomino(random);
+            var modifierId = modifierPool[random.Next(modifierPool.Length)];
+            var modifier = DominoModifierRegistry.GetById(modifierId);
+            run.PurchasedDominoes.Add(new DominoInstance($"jackpot_domino_{run.PurchasedDominoes.Count}", definition, modifierId));
+            return $"{label}: {modifier?.Name ?? "domino"} ajoute a ton sac.";
         }
 
         private static void ApplyMostPlayedPatternLevels(RunState run, int totalLevels)
